@@ -9,6 +9,8 @@ export type TeamName =
   | 'content'
   | 'investor_relations'
 
+export type AgentRunStatus = 'pending' | 'running' | 'complete' | 'failed'
+
 export type CampaignStatus =
   | 'briefing'
   | 'researching'

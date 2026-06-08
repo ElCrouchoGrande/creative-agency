@@ -1,4 +1,4 @@
-import type { Brief, CampaignStatus, WarRoom } from './types'
+import type { Brief, CampaignStatus, WarRoom, AgentRunStatus } from './types'
 
 export interface AgentRun {
   id: string
@@ -6,7 +6,7 @@ export interface AgentRun {
   phase: string
   team: string
   agent: string
-  status: string
+  status: AgentRunStatus
   output: string
   tokensUsed: number
   createdAt: string

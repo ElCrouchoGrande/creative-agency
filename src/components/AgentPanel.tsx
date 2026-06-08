@@ -1,15 +1,17 @@
 'use client'
 
+import type { AgentRunStatus } from '@/lib/types'
+
 interface AgentPanelProps {
   team: string
   agent: string
   output: string
-  status: 'pending' | 'running' | 'complete' | 'failed'
+  status: AgentRunStatus
 }
 
 export function AgentPanel({ team, agent, output, status }: AgentPanelProps) {
-  const agentLabel = agent.replace(/_/g, ' ')
-  const teamLabel = team.replace(/_/g, ' ')
+  const agentLabel = agent.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+  const teamLabel = team.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -25,12 +27,9 @@ export function AgentPanel({ team, agent, output, status }: AgentPanelProps) {
           <p className="text-sm text-gray-400 italic">Waiting to start…</p>
         )}
         {status === 'running' && !output && (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-            Thinking…
-          </div>
+          <p className="text-sm text-gray-500 italic">Thinking…</p>
         )}
-        {output && status !== 'failed' && (
+        {output && (
           <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{output}</p>
         )}
         {status === 'failed' && (
@@ -41,7 +40,7 @@ export function AgentPanel({ team, agent, output, status }: AgentPanelProps) {
   )
 }
 
-function StatusIndicator({ status }: { status: AgentPanelProps['status'] }) {
+function StatusIndicator({ status }: { status: AgentRunStatus }) {
   if (status === 'running') {
     return <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
   }

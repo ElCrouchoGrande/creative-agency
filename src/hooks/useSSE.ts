@@ -24,10 +24,6 @@ export function useSSE(
       }
     }
 
-    source.onerror = () => {
-      source.close()
-    }
-
     return () => source.close()
   }, [campaignId])
 }
