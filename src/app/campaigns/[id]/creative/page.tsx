@@ -17,7 +17,17 @@ export default function CreativePage() {
   useEffect(() => {
     getCampaign(id).then((campaign) => {
       setStatus(campaign.status)
-      setPaths(campaign.warRoom.creativePaths ?? [])
+      const raw = campaign.warRoom.creativePaths
+      if (Array.isArray(raw)) {
+        setPaths(raw)
+      } else if (raw && typeof raw === 'object') {
+        // Agents write paths as {A: ..., B: ..., C: ...} — normalize to array
+        setPaths(
+          Object.values(raw as Record<string, unknown>).map((v) =>
+            typeof v === 'string' ? (JSON.parse(v) as CreativePath) : (v as CreativePath)
+          )
+        )
+      }
       if (['specialist', 'challenge', 'awaiting_review', 'complete'].includes(campaign.status)) {
         router.push(`/campaigns/${id}/teams`)
       }

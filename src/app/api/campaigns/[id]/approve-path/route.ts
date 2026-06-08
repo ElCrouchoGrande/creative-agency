@@ -22,7 +22,15 @@ export async function POST(
   }
 
   const warRoom = JSON.parse(campaign.warRoom) as WarRoom
-  const chosen = warRoom.creativePaths?.find((p) => p.id === pathId)
+  const rawPaths = warRoom.creativePaths
+  let chosen: import('@/lib/types').CreativePath | undefined
+  if (Array.isArray(rawPaths)) {
+    chosen = rawPaths.find((p) => p.id === pathId)
+  } else if (rawPaths && typeof rawPaths === 'object') {
+    // Agents write paths as {A: ..., B: ..., C: ...} with JSON string values
+    const raw = (rawPaths as Record<string, unknown>)[pathId]
+    chosen = typeof raw === 'string' ? JSON.parse(raw) : (raw as import('@/lib/types').CreativePath)
+  }
   if (!chosen) {
     return NextResponse.json({ error: `Creative path ${pathId} not found` }, { status: 404 })
   }
