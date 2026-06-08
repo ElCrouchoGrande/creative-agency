@@ -69,12 +69,16 @@ export async function runAgent(options: AgentRunOptions): Promise<string> {
 
       if (response.stop_reason !== 'tool_use' || !onToolCall) break
 
-      const toolUseBlock = response.content.find((b) => b.type === 'tool_use')
-      if (!toolUseBlock || toolUseBlock.type !== 'tool_use') break
+      const toolUseBlocks = response.content.filter((b) => b.type === 'tool_use')
+      if (toolUseBlocks.length === 0) break
 
-      const toolResult = await onToolCall(
-        toolUseBlock.name,
-        toolUseBlock.input as Record<string, unknown>
+      // Execute all tool calls — API requires a tool_result for every tool_use in the message
+      const toolResults = await Promise.all(
+        toolUseBlocks.map(async (block) => {
+          if (block.type !== 'tool_use') return null
+          const result = await onToolCall(block.name, block.input as Record<string, unknown>)
+          return { type: 'tool_result' as const, tool_use_id: block.id, content: result }
+        })
       )
 
       currentMessages = [
@@ -82,7 +86,7 @@ export async function runAgent(options: AgentRunOptions): Promise<string> {
         { role: 'assistant', content: response.content },
         {
           role: 'user',
-          content: [{ type: 'tool_result', tool_use_id: toolUseBlock.id, content: toolResult }],
+          content: toolResults.filter((r): r is NonNullable<typeof r> => r !== null),
         },
       ]
     }
