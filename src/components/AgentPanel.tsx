@@ -30,7 +30,7 @@ export function AgentPanel({ team, agent, output, status }: AgentPanelProps) {
             Thinking…
           </div>
         )}
-        {output && (
+        {output && status !== 'failed' && (
           <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{output}</p>
         )}
         {status === 'failed' && (
