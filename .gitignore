@@ -42,3 +42,11 @@ next-env.d.ts
 
 # superpowers session files
 .superpowers/
+
+/generated/prisma
+
+# SQLite database files
+dev.db
+dev.db-journal
+*.db-shm
+*.db-wal
