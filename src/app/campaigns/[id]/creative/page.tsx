@@ -18,16 +18,17 @@ export default function CreativePage() {
     getCampaign(id).then((campaign) => {
       setStatus(campaign.status)
       const raw = campaign.warRoom.creativePaths
+      let normalized: CreativePath[] = []
       if (Array.isArray(raw)) {
-        setPaths(raw)
+        normalized = raw
       } else if (raw && typeof raw === 'object') {
-        // Agents write paths as {A: ..., B: ..., C: ...} — normalize to array
-        setPaths(
-          Object.values(raw as Record<string, unknown>).map((v) =>
-            typeof v === 'string' ? (JSON.parse(v) as CreativePath) : (v as CreativePath)
-          )
-        )
+        // Agents write paths as {A: ..., B: ..., C: ...} — normalize to sorted array
+        normalized = Object.values(raw as Record<string, unknown>)
+          .map((v) => typeof v === 'string' ? (JSON.parse(v) as CreativePath) : (v as CreativePath))
+          .filter((p): p is CreativePath => Boolean(p?.id && p?.concept))
+          .sort((a, b) => a.id.localeCompare(b.id))
       }
+      setPaths(normalized)
       if (['specialist', 'challenge', 'awaiting_review', 'complete'].includes(campaign.status)) {
         router.push(`/campaigns/${id}/teams`)
       }
@@ -86,7 +87,7 @@ export default function CreativePage() {
             </div>
             <p className="text-sm font-semibold text-gray-900 mb-2 leading-tight">{path.concept}</p>
             <p className="text-xs text-gray-600 leading-relaxed mb-3">{path.rationale}</p>
-            {path.keyMessages.length > 0 && (
+            {(path.keyMessages ?? []).length > 0 && (
               <ul className="space-y-1">
                 {path.keyMessages.map((msg, i) => (
                   <li key={i} className="text-xs text-gray-500 flex items-start gap-1.5">
