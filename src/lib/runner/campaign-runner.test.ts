@@ -55,13 +55,13 @@ describe('runCampaign', () => {
     expect(statuses).toContain('awaiting_path')
   })
 
-  it('calls research, creative, and orchestrator in order', async () => {
+  it('calls research then creative phases in order', async () => {
     const { runResearchPhase } = await import('@/lib/agents/research')
     const { runCreativePhase } = await import('@/lib/agents/creative')
     const { runOrchestrator } = await import('@/lib/agents/orchestrator')
     await runCampaign('camp-1')
     expect(runResearchPhase).toHaveBeenCalledWith('camp-1')
     expect(runCreativePhase).toHaveBeenCalledWith('camp-1')
-    expect(runOrchestrator).toHaveBeenCalledWith('camp-1')
+    expect(runOrchestrator).not.toHaveBeenCalled()
   })
 })

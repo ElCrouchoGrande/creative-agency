@@ -20,8 +20,6 @@ export async function runCampaign(campaignId: string): Promise<void> {
     await setStatus(campaignId, 'creative')
     await runCreativePhase(campaignId)
 
-    await runOrchestrator(campaignId)
-
     // Pause for client to select a creative path
     await setStatus(campaignId, 'awaiting_path')
   } catch (error) {
