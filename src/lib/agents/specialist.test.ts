@@ -12,6 +12,7 @@ vi.mock('@/lib/db', () => ({
         brief: JSON.stringify({ goal: 'Test', brand: 'Brand', audience: 'Audience', background: '' }),
         warRoom: JSON.stringify({ chosenPath: { id: 'A', concept: 'Test concept', rationale: 'Test rationale', keyMessages: [] } }),
       }),
+      update: vi.fn().mockResolvedValue({}),
     },
   },
 }))

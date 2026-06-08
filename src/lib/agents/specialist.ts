@@ -6,6 +6,15 @@ import { MODEL, TEAM_CONVERSATION_TURNS } from '@/lib/config'
 import { db } from '@/lib/db'
 import type { TeamName, WarRoom } from '@/lib/types'
 
+async function writeTeamDraft(campaignId: string, teamName: TeamName, draft: string): Promise<void> {
+  const campaign = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
+  const warRoom = JSON.parse(campaign.warRoom) as Record<string, unknown>
+  const teamOutputs = (warRoom.teamOutputs ?? {}) as Record<string, unknown>
+  teamOutputs[teamName] = { ...(teamOutputs[teamName] as object ?? {}), draft }
+  warRoom.teamOutputs = teamOutputs
+  await db.campaign.update({ where: { id: campaignId }, data: { warRoom: JSON.stringify(warRoom) } })
+}
+
 export async function runSpecialistTeam(campaignId: string, teamName: TeamName): Promise<void> {
   const campaign = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
   const brief = JSON.parse(campaign.brief)
@@ -32,6 +41,7 @@ Write your team's campaign plan.`
 
   // Turn 1: Strategist opens
   messages.push({ role: 'user', content: context })
+  // Turn 1: strategist thinks and plans — no war room writes yet
   const strategistOutput = await runAgent({
     campaignId,
     phase: 'specialist',
@@ -40,8 +50,6 @@ Write your team's campaign plan.`
     model: MODEL.specialist,
     systemPrompt: prompts.strategist,
     messages: [...messages],
-    tools: [WRITE_WAR_ROOM_TOOL],
-    onToolCall: makeToolHandler,
   })
   messages.push({ role: 'assistant', content: strategistOutput })
 
@@ -65,9 +73,9 @@ Write your team's campaign plan.`
   if (TEAM_CONVERSATION_TURNS >= 3) {
     messages.push({
       role: 'user',
-      content: `Incorporate this feedback. Write the final, sharpened team plan. Use write_war_room to save the draft to "teamOutputs.${teamName}.draft".`,
+      content: `Incorporate this feedback. Write the complete, final ${teamName} plan in full — output the entire plan as text in your response. Then call write_war_room with path "teamOutputs.${teamName}.draft" to save it.`,
     })
-    await runAgent({
+    const closingOutput = await runAgent({
       campaignId,
       phase: 'specialist',
       team: teamName,
@@ -78,6 +86,9 @@ Write your team's campaign plan.`
       tools: [WRITE_WAR_ROOM_TOOL],
       onToolCall: makeToolHandler,
     })
+    // Fallback: if agent only called write_war_room without text output, use specialist output
+    const draft = closingOutput || specialistOutput
+    await writeTeamDraft(campaignId, teamName, draft)
   }
 }
 
