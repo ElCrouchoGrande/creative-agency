@@ -85,20 +85,30 @@ export async function handleToolCall(
 ): Promise<string> {
   if (name === 'web_search') {
     const query = input.query as string
-    const response = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
-      },
-      body: JSON.stringify({ query, max_results: 5, search_depth: 'basic' }),
-    })
-    const data = (await response.json()) as {
-      results: Array<{ title: string; url: string; content: string }>
+    try {
+      const response = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
+        },
+        body: JSON.stringify({ query, max_results: 5, search_depth: 'basic' }),
+      })
+      const data = (await response.json()) as {
+        results?: Array<{ title: string; url: string; content: string }>
+        error?: string
+      }
+      if (!response.ok || !data.results) {
+        console.error('[web_search] Tavily error:', response.status, data.error ?? data)
+        return `Web search unavailable (${response.status}). Proceed using training knowledge.`
+      }
+      return data.results
+        .map((r) => `**${r.title}**\n${r.url}\n${r.content}`)
+        .join('\n\n---\n\n')
+    } catch (err) {
+      console.error('[web_search] fetch failed:', err)
+      return 'Web search unavailable (network error). Proceed using training knowledge.'
     }
-    return data.results
-      .map((r) => `**${r.title}**\n${r.url}\n${r.content}`)
-      .join('\n\n---\n\n')
   }
 
   if (name === 'write_war_room') {

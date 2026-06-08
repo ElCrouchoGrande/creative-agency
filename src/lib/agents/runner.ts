@@ -95,6 +95,7 @@ export async function runAgent(options: AgentRunOptions): Promise<string> {
     campaignEvents.emit(campaignId, { type: 'agent_complete', team, agent, output: finalOutput })
     return finalOutput
   } catch (error) {
+    console.error(`[agent:${agent}] failed:`, error)
     await db.agentRun.update({ where: { id: run.id }, data: { status: 'failed' } })
     campaignEvents.emit(campaignId, { type: 'agent_failed', team, agent })
     throw error
