@@ -49,7 +49,7 @@ export async function runAgent(options: AgentRunOptions): Promise<string> {
     let tokensUsed = 0
 
     while (true) {
-      const response = await anthropic.messages.create({
+      const stream = anthropic.messages.stream({
         model,
         max_tokens: 4096,
         system: systemPrompt,
@@ -57,15 +57,16 @@ export async function runAgent(options: AgentRunOptions): Promise<string> {
         tools: tools.length > 0 ? tools : undefined,
       })
 
+      stream.on('text', (token) => {
+        campaignEvents.emit(campaignId, { type: 'agent_token', team, agent, token })
+      })
+
+      const response = await stream.finalMessage()
       tokensUsed += response.usage?.output_tokens ?? 0
 
       const textBlock = response.content.find((b) => b.type === 'text')
       const text = textBlock?.type === 'text' ? textBlock.text : ''
-
-      if (text) {
-        finalOutput = text
-        campaignEvents.emit(campaignId, { type: 'agent_token', team, agent, token: text })
-      }
+      if (text) finalOutput = text
 
       if (response.stop_reason !== 'tool_use' || !onToolCall) break
 

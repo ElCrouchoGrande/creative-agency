@@ -4,10 +4,17 @@ import { runAgent } from './runner'
 vi.mock('@anthropic-ai/sdk', () => ({
   default: vi.fn().mockImplementation(() => ({
     messages: {
-      create: vi.fn().mockResolvedValue({
-        content: [{ type: 'text', text: 'Agent response text' }],
-        usage: { input_tokens: 100, output_tokens: 50 },
-        stop_reason: 'end_turn',
+      create: vi.fn(), // kept for makeClient() duck-type check only
+      stream: vi.fn().mockReturnValue({
+        on: vi.fn().mockImplementation(function (event: string, cb: (t: string) => void) {
+          if (event === 'text') cb('Agent response text')
+          return this
+        }),
+        finalMessage: vi.fn().mockResolvedValue({
+          content: [{ type: 'text', text: 'Agent response text' }],
+          usage: { input_tokens: 100, output_tokens: 50 },
+          stop_reason: 'end_turn',
+        }),
       }),
     },
   })),
@@ -64,7 +71,13 @@ describe('runAgent', () => {
   it('sets status failed and rethrows on API error', async () => {
     const Anthropic = (await import('@anthropic-ai/sdk')).default as ReturnType<typeof vi.fn>
     Anthropic.mockImplementationOnce(() => ({
-      messages: { create: vi.fn().mockRejectedValue(new Error('API error')) },
+      messages: {
+        create: vi.fn(),
+        stream: vi.fn().mockReturnValue({
+          on: vi.fn().mockReturnThis(),
+          finalMessage: vi.fn().mockRejectedValue(new Error('API error')),
+        }),
+      },
     }))
     const { db } = await import('@/lib/db')
     await expect(
