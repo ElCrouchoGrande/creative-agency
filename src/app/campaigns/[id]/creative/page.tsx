@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getCampaign, approvePath } from '@/lib/api'
 import type { CreativePath } from '@/lib/types'
@@ -13,26 +13,52 @@ export default function CreativePage() {
   const [selected, setSelected] = useState<'A' | 'B' | 'C' | null>(null)
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<string>('creative')
+  const pathsReady = useRef(false)
+
+  function normalizePaths(campaign: Awaited<ReturnType<typeof getCampaign>>): CreativePath[] {
+    const raw = campaign.warRoom.creativePaths
+    if (!raw) return []
+    if (Array.isArray(raw)) return raw
+    return Object.values(raw as Record<string, unknown>)
+      .map((v) => typeof v === 'string' ? (JSON.parse(v) as CreativePath) : (v as CreativePath))
+      .filter((p): p is CreativePath => Boolean(p?.id && p?.concept))
+      .sort((a, b) => a.id.localeCompare(b.id))
+  }
 
   useEffect(() => {
-    getCampaign(id).then((campaign) => {
+    const load = async () => {
+      const campaign = await getCampaign(id)
       setStatus(campaign.status)
-      const raw = campaign.warRoom.creativePaths
-      let normalized: CreativePath[] = []
-      if (Array.isArray(raw)) {
-        normalized = raw
-      } else if (raw && typeof raw === 'object') {
-        // Agents write paths as {A: ..., B: ..., C: ...} — normalize to sorted array
-        normalized = Object.values(raw as Record<string, unknown>)
-          .map((v) => typeof v === 'string' ? (JSON.parse(v) as CreativePath) : (v as CreativePath))
-          .filter((p): p is CreativePath => Boolean(p?.id && p?.concept))
-          .sort((a, b) => a.id.localeCompare(b.id))
+      const normalized = normalizePaths(campaign)
+      if (normalized.length > 0) {
+        setPaths(normalized)
+        pathsReady.current = true
       }
-      setPaths(normalized)
-      if (['specialist', 'challenge', 'awaiting_review', 'complete'].includes(campaign.status)) {
+      if (['specialist', 'challenge', 'measuring', 'awaiting_review', 'complete'].includes(campaign.status)) {
         router.push(`/campaigns/${id}/teams`)
       }
-    })
+    }
+    load()
+  }, [id, router])
+
+  // Poll until creative paths appear — handles SSE drops and early redirects from research page
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (pathsReady.current) { clearInterval(interval); return }
+      const campaign = await getCampaign(id)
+      setStatus(campaign.status)
+      const normalized = normalizePaths(campaign)
+      if (normalized.length > 0) {
+        setPaths(normalized)
+        pathsReady.current = true
+        clearInterval(interval)
+      }
+      if (['specialist', 'challenge', 'measuring', 'awaiting_review', 'complete'].includes(campaign.status)) {
+        router.push(`/campaigns/${id}/teams`)
+        clearInterval(interval)
+      }
+    }, 5000)
+    return () => clearInterval(interval)
   }, [id, router])
 
   async function handleApprove() {
