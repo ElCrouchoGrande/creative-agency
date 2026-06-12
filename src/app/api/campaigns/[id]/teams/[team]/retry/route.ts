@@ -13,6 +13,14 @@ export async function POST(
     return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
   }
 
+  // Clear stale output so the output page doesn't show old content alongside the new run
+  const warRoom = JSON.parse(campaign.warRoom) as Record<string, unknown>
+  const teamOutputs = (warRoom.teamOutputs ?? {}) as Record<string, unknown>
+  const existing = (teamOutputs[team] ?? {}) as Record<string, unknown>
+  teamOutputs[team] = { ...existing, draft: '', challengeResponse: '' }
+  warRoom.teamOutputs = teamOutputs
+  await db.campaign.update({ where: { id }, data: { warRoom: JSON.stringify(warRoom) } })
+
   setImmediate(() => {
     runSpecialistTeam(id, team as TeamName).catch(console.error)
   })

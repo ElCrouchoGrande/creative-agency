@@ -51,7 +51,7 @@ export async function runFacilitatorPhase(campaignId: string): Promise<void> {
     challengePairs.map(async ({ challenger, challenged }) => {
       const challengerDraft = warRoom.teamOutputs?.[challenger]?.draft ?? ''
 
-      const challengeInput = `The ${challenger.replace(/_/g, ' ')} team says:\n${challengerDraft}\n\nChallenge the ${challenged.replace(/_/g, ' ')} team's plan in light of this. What should they change or strengthen?`
+      const challengeInput = `The ${challenger.replace(/_/g, ' ')} team is approaching this campaign as follows:\n\n${challengerDraft}\n\nReview their angle against yours and write a complete revised version of your own plan — a full deliverable, not feedback or critique.`
 
       // Write challengeInput to war room
       const current = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
@@ -74,7 +74,7 @@ export async function runFacilitatorPhase(campaignId: string): Promise<void> {
         messages: [
           {
             role: 'user',
-            content: `${challengeInput}\n\nRevise and sharpen your plan in response. Use write_war_room to save your response to "teamOutputs.${challenged}.challengeResponse".`,
+            content: `${challengeInput}\n\nWrite your complete, revised campaign plan as a deliverable document. Use write_war_room with path "teamOutputs.${challenged}.challengeResponse" to save it.`,
           },
         ],
         tools: [WRITE_WAR_ROOM_TOOL],

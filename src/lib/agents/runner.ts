@@ -29,7 +29,7 @@ function makeClient(): Anthropic {
   } catch {
     // fall through
   }
-  return new Anthropic()
+  return new Anthropic({ timeout: 15 * 60 * 1000 }) // 15 min — research agents do multiple web searches
 }
 
 export async function runAgent(options: AgentRunOptions): Promise<string> {

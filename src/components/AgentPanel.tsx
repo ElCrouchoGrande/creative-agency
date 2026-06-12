@@ -5,12 +5,13 @@ import type { AgentRunStatus } from '@/lib/types'
 interface AgentPanelProps {
   team: string
   agent: string
+  label?: string
   output: string
   status: AgentRunStatus
 }
 
-export function AgentPanel({ team, agent, output, status }: AgentPanelProps) {
-  const agentLabel = agent.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+export function AgentPanel({ team, agent, label, output, status }: AgentPanelProps) {
+  const agentLabel = label ?? agent.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
   const teamLabel = team.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
   return (

@@ -19,7 +19,6 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('./tools', () => ({
   handleToolCall: vi.fn().mockResolvedValue('Tool result'),
-  WRITE_WAR_ROOM_TOOL: { name: 'write_war_room' },
 }))
 
 describe('runSpecialistTeam', () => {

@@ -7,6 +7,7 @@ const LABELS: Record<CampaignStatus, string> = {
   awaiting_path: 'Choose Path',
   specialist: 'Teams Working',
   challenge: 'Challenge Round',
+  measuring: 'Measuring',
   awaiting_review: 'Ready to Review',
   complete: 'Complete',
 }
@@ -18,6 +19,7 @@ const COLORS: Record<CampaignStatus, string> = {
   awaiting_path: 'bg-yellow-100 text-yellow-700',
   specialist: 'bg-blue-100 text-blue-700',
   challenge: 'bg-orange-100 text-orange-700',
+  measuring: 'bg-blue-100 text-blue-700',
   awaiting_review: 'bg-teal-100 text-teal-700',
   complete: 'bg-green-100 text-green-700',
 }

@@ -1,6 +1,5 @@
 import type { MessageParam } from '@anthropic-ai/sdk/resources'
 import { runAgent } from './runner'
-import { handleToolCall, WRITE_WAR_ROOM_TOOL } from './tools'
 import { SPECIALIST_PROMPTS } from './prompts/specialist'
 import { MODEL, TEAM_CONVERSATION_TURNS } from '@/lib/config'
 import { db } from '@/lib/db'
@@ -34,8 +33,6 @@ ${JSON.stringify(warRoom.research, null, 2)}
 Write your team's campaign plan.`
 
   const prompts = SPECIALIST_PROMPTS[teamName]
-  const makeToolHandler = (name: string, input: Record<string, unknown>) =>
-    handleToolCall(name, input, campaignId)
 
   const messages: MessageParam[] = []
 
@@ -70,10 +67,12 @@ Write your team's campaign plan.`
   messages.push({ role: 'assistant', content: specialistOutput })
 
   // Turn 3: Strategist closes (if turns >= 3)
+  // No tool here — pure text output. The agent calling write_war_room was writing the
+  // specialist's critique as content instead of a revised plan. Capturing text directly is reliable.
   if (TEAM_CONVERSATION_TURNS >= 3) {
     messages.push({
       role: 'user',
-      content: `Incorporate this feedback. Write the complete, final ${teamName} plan in full — output the entire plan as text in your response. Then call write_war_room with path "teamOutputs.${teamName}.draft" to save it.`,
+      content: `The specialist has reviewed your plan and given feedback above. Now write the complete, final ${teamName} plan incorporating their suggestions. Output the full plan as your response — do not summarise the feedback or critique the previous version. Write the deliverable.`,
     })
     const closingOutput = await runAgent({
       campaignId,
@@ -83,12 +82,9 @@ Write your team's campaign plan.`
       model: MODEL.specialist,
       systemPrompt: prompts.strategist,
       messages: [...messages],
-      tools: [WRITE_WAR_ROOM_TOOL],
-      onToolCall: makeToolHandler,
     })
-    // Fallback: if agent only called write_war_room without text output, use specialist output
-    const draft = closingOutput || specialistOutput
-    await writeTeamDraft(campaignId, teamName, draft)
+    // Fall back to original strategist plan rather than the critique
+    await writeTeamDraft(campaignId, teamName, closingOutput || strategistOutput)
   }
 }
 

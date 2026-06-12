@@ -10,6 +10,7 @@ export default function OutputPage() {
   const { id } = useParams<{ id: string }>()
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [copying, setCopying] = useState(false)
+  const [regenerating, setRegenerating] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     getCampaign(id).then(setCampaign)
@@ -41,6 +42,10 @@ export default function OutputPage() {
       lines.push(`\n## ${label}`)
       lines.push(output.challengeResponse || output.draft)
     }
+    if (warRoom.measurement) {
+      lines.push('\n## Measurement Framework')
+      lines.push(warRoom.measurement)
+    }
     return lines.join('\n')
   }
 
@@ -48,6 +53,23 @@ export default function OutputPage() {
     setCopying(true)
     await navigator.clipboard.writeText(buildMarkdown())
     setTimeout(() => setCopying(false), 1500)
+  }
+
+  async function handleRegenerate(team: string) {
+    setRegenerating((prev) => new Set([...prev, team]))
+    await retryTeam(id, team)
+    const poll = setInterval(async () => {
+      const updated = await getCampaign(id)
+      setCampaign(updated)
+      if (updated.warRoom.teamOutputs?.[team as TeamName]?.draft) {
+        setRegenerating((prev) => {
+          const next = new Set(prev)
+          next.delete(team)
+          return next
+        })
+        clearInterval(poll)
+      }
+    }, 5000)
   }
 
   const teamLabel = (name: string) =>
@@ -86,26 +108,59 @@ export default function OutputPage() {
       )}
 
       <div className="space-y-6">
+        {warRoom.measurement && (
+          <div className="border-2 border-gray-900 rounded-xl overflow-hidden">
+            <div className="px-5 py-3 bg-gray-900">
+              <h3 className="text-sm font-semibold text-white">Measurement Framework</h3>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{warRoom.measurement}</p>
+            </div>
+          </div>
+        )}
         {teams.map((team) => {
           const output = warRoom.teamOutputs?.[team]
-          const finalPlan = output?.challengeResponse || output?.draft
+          const isRunning = regenerating.has(team)
 
           return (
             <div key={team} className="border border-gray-200 rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-900">{teamLabel(team)}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-gray-900">{teamLabel(team)}</h3>
+                  {isRunning && (
+                    <span className="flex items-center gap-1 text-xs text-blue-500">
+                      <span className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                      Regenerating…
+                    </span>
+                  )}
+                </div>
                 <button
-                  onClick={() => retryTeam(id, team).then(() => getCampaign(id).then(setCampaign))}
-                  className="text-xs text-gray-500 hover:text-gray-900 transition-colors"
+                  onClick={() => handleRegenerate(team)}
+                  disabled={isRunning}
+                  className="text-xs text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Regenerate
                 </button>
               </div>
               <div className="p-5">
-                {finalPlan ? (
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{finalPlan}</p>
+                {output?.draft ? (
+                  <div>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{output.draft}</p>
+                    {output.challengeResponse && (
+                      <div className="mt-6 pt-6 border-t border-gray-100">
+                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
+                          Revised after cross-team challenge
+                        </p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                          {output.challengeResponse}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : isRunning ? (
+                  <p className="text-sm text-gray-400 italic">Working on it — this takes a few minutes…</p>
                 ) : (
-                  <p className="text-sm text-gray-400 italic">No output yet for this team.</p>
+                  <p className="text-sm text-gray-400 italic">No output yet. Click Regenerate to run this team.</p>
                 )}
               </div>
             </div>

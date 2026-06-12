@@ -18,6 +18,7 @@ export type CampaignStatus =
   | 'awaiting_path'
   | 'specialist'
   | 'challenge'
+  | 'measuring'
   | 'awaiting_review'
   | 'complete'
 
@@ -54,6 +55,7 @@ export interface WarRoom {
   creativePaths?: CreativePath[]
   chosenPath?: CreativePath
   teamOutputs?: Partial<Record<TeamName, Partial<TeamOutput>>>
+  measurement?: string
 }
 
 export type CampaignEvent =

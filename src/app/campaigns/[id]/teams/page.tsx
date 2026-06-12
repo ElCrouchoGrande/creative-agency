@@ -47,12 +47,20 @@ export default function TeamsPage() {
       for (const team of teams) {
         initial[team] = emptyTeamState()
         const teamOutput = campaign.warRoom.teamOutputs?.[team]
-        if (teamOutput?.draft) {
-          initial[team].agents.strategist_close = { output: teamOutput.draft, status: 'complete' }
-          if (teamOutput.challengeInput) initial[team].challengeInput = teamOutput.challengeInput
-          if (teamOutput.challengeResponse) initial[team].challengeResponse = teamOutput.challengeResponse
+        if (teamOutput?.challengeInput) initial[team].challengeInput = teamOutput.challengeInput
+        if (teamOutput?.challengeResponse) initial[team].challengeResponse = teamOutput.challengeResponse
+      }
+
+      // Populate all three debate turns from stored agent runs
+      for (const run of campaign.agentRuns ?? []) {
+        if (!initial[run.team]) continue
+        if (!(run.agent in initial[run.team].agents)) continue
+        initial[run.team].agents[run.agent] = {
+          output: run.output ?? '',
+          status: run.status,
         }
       }
+
       setTeamStates(initial)
 
       if (campaign.status === 'awaiting_review' || campaign.status === 'complete') {
@@ -139,8 +147,18 @@ export default function TeamsPage() {
 
   useSSE(id, handleEvent)
 
+  const AGENT_LABELS: Record<string, string> = {
+    strategist: 'Strategy Director',
+    specialist: 'Specialist Review',
+    strategist_close: 'Revised Strategy',
+    challenge_response: 'After Challenge',
+  }
+
   const teamLabel = (name: string) =>
     name.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+
+  const agentLabel = (name: string) =>
+    AGENT_LABELS[name] ?? name.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
   return (
     <div>
@@ -194,6 +212,7 @@ export default function TeamsPage() {
                     key={agentName}
                     team={team}
                     agent={agentName}
+                    label={agentLabel(agentName)}
                     output={agentState.output}
                     status={agentState.status}
                   />
