@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import { getCampaign, retryTeam } from '@/lib/api'
 import { useSSE } from '@/hooks/useSSE'
 import { AgentPanel } from '@/components/AgentPanel'
@@ -31,7 +32,6 @@ function emptyTeamState(): TeamState {
 
 export default function TeamsPage() {
   const { id } = useParams<{ id: string }>()
-  const router = useRouter()
 
   const [activeTeams, setActiveTeams] = useState<TeamName[]>([])
   const [teamStates, setTeamStates] = useState<Record<string, TeamState>>({})
@@ -62,14 +62,14 @@ export default function TeamsPage() {
       }
 
       setTeamStates(initial)
-
-      if (campaign.status === 'awaiting_review' || campaign.status === 'complete') {
-        router.push(`/campaigns/${id}/output`)
-      }
     })
-  }, [id, router])
+  }, [id])
 
   const handleEvent = useCallback((event: CampaignEvent) => {
+    if (event.type === 'phase_change') {
+      setCampaignStatus(event.status)
+      return
+    }
     if (event.type === 'agent_start') {
       const team = event.team
       setTeamStates((prev) => {
@@ -137,13 +137,7 @@ export default function TeamsPage() {
         }
       })
     }
-    if (event.type === 'phase_change') {
-      setCampaignStatus(event.status)
-      if (event.status === 'awaiting_review') {
-        setTimeout(() => router.push(`/campaigns/${id}/output`), 800)
-      }
-    }
-  }, [id, router])
+  }, [])
 
   useSSE(id, handleEvent)
 
@@ -162,16 +156,32 @@ export default function TeamsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Phase 3 of 3</p>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {campaignStatus === 'challenge' ? 'Challenge Round' : 'Specialist Teams'}
-        </h1>
-        <p className="text-gray-500 mt-1">
-          {campaignStatus === 'challenge'
-            ? 'Teams are challenging each other to sharpen their plans.'
-            : 'Each team is brainstorming their approach internally.'}
-        </p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Phase 3 of 3</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {campaignStatus === 'challenge' ? 'Challenge Round' :
+             campaignStatus === 'measuring' ? 'Measuring' :
+             'Specialist Teams'}
+          </h1>
+          <p className="text-gray-500 mt-1">
+            {campaignStatus === 'challenge'
+              ? 'Teams are challenging each other to sharpen their plans.'
+              : campaignStatus === 'measuring'
+              ? 'Measurement agent is building the KPI framework.'
+              : campaignStatus === 'awaiting_review' || campaignStatus === 'complete'
+              ? 'All teams have completed their plans.'
+              : 'Each team is debating their approach internally.'}
+          </p>
+        </div>
+        {(campaignStatus === 'awaiting_review' || campaignStatus === 'complete') && (
+          <Link
+            href={`/campaigns/${id}/output`}
+            className="bg-gray-900 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+          >
+            View Output →
+          </Link>
+        )}
       </div>
 
       {activeTeams.length === 0 && (
