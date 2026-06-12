@@ -37,32 +37,46 @@ export default function TeamsPage() {
   const [teamStates, setTeamStates] = useState<Record<string, TeamState>>({})
   const [campaignStatus, setCampaignStatus] = useState<string>('specialist')
 
+  function applyFetch(campaign: Awaited<ReturnType<typeof getCampaign>>) {
+    setCampaignStatus(campaign.status)
+    const teams = campaign.activeTeams as TeamName[]
+    setActiveTeams(teams)
+
+    const next: Record<string, TeamState> = {}
+    for (const team of teams) {
+      next[team] = emptyTeamState()
+      const teamOutput = campaign.warRoom.teamOutputs?.[team]
+      if (teamOutput?.challengeInput) next[team].challengeInput = teamOutput.challengeInput
+      if (teamOutput?.challengeResponse) next[team].challengeResponse = teamOutput.challengeResponse
+    }
+
+    for (const run of campaign.agentRuns ?? []) {
+      if (!next[run.team]) continue
+      if (!(run.agent in next[run.team].agents)) continue
+      next[run.team].agents[run.agent] = {
+        output: run.output ?? '',
+        status: run.status,
+      }
+    }
+
+    setTeamStates(next)
+    return teams
+  }
+
+  // Initial load
   useEffect(() => {
-    getCampaign(id).then((campaign) => {
-      setCampaignStatus(campaign.status)
-      const teams = campaign.activeTeams as TeamName[]
-      setActiveTeams(teams)
+    getCampaign(id).then(applyFetch)
+  }, [id])
 
-      const initial: Record<string, TeamState> = {}
-      for (const team of teams) {
-        initial[team] = emptyTeamState()
-        const teamOutput = campaign.warRoom.teamOutputs?.[team]
-        if (teamOutput?.challengeInput) initial[team].challengeInput = teamOutput.challengeInput
-        if (teamOutput?.challengeResponse) initial[team].challengeResponse = teamOutput.challengeResponse
-      }
-
-      // Populate all three debate turns from stored agent runs
-      for (const run of campaign.agentRuns ?? []) {
-        if (!initial[run.team]) continue
-        if (!(run.agent in initial[run.team].agents)) continue
-        initial[run.team].agents[run.agent] = {
-          output: run.output ?? '',
-          status: run.status,
-        }
-      }
-
-      setTeamStates(initial)
-    })
+  // Poll until teams appear — orchestrator runs async after approve-path, so activeTeams
+  // may be empty on first load even though status is already 'specialist'
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const campaign = await getCampaign(id)
+      const teams = applyFetch(campaign)
+      if (teams.length > 0) clearInterval(interval)
+    }, 3000)
+    return () => clearInterval(interval)
   }, [id])
 
   const handleEvent = useCallback((event: CampaignEvent) => {
@@ -70,22 +84,26 @@ export default function TeamsPage() {
       setCampaignStatus(event.status)
       return
     }
+
+    // Dynamically add teams that arrive via SSE before the poll catches them
     if (event.type === 'agent_start') {
-      const team = event.team
+      const team = event.team as TeamName
+      setActiveTeams((prev) => prev.includes(team) ? prev : [...prev, team])
       setTeamStates((prev) => {
-        if (!prev[team]) return prev
+        const existing = prev[team] ?? emptyTeamState()
         return {
           ...prev,
           [team]: {
-            ...prev[team],
+            ...existing,
             agents: {
-              ...prev[team].agents,
+              ...existing.agents,
               [event.agent]: { output: '', status: 'running' },
             },
           },
         }
       })
     }
+
     if (event.type === 'agent_token') {
       const team = event.team
       setTeamStates((prev) => {
@@ -105,6 +123,7 @@ export default function TeamsPage() {
         }
       })
     }
+
     if (event.type === 'agent_complete') {
       const team = event.team
       setTeamStates((prev) => {
@@ -121,6 +140,7 @@ export default function TeamsPage() {
         }
       })
     }
+
     if (event.type === 'agent_failed') {
       const team = event.team
       setTeamStates((prev) => {
@@ -215,7 +235,7 @@ export default function TeamsPage() {
               </div>
               <div className="p-3 space-y-2">
                 {!hasStarted && (
-                  <p className="text-xs text-gray-400 italic py-4 text-center">Waiting for orchestrator…</p>
+                  <p className="text-xs text-gray-400 italic py-4 text-center">Waiting to start…</p>
                 )}
                 {visibleAgents.map(([agentName, agentState]) => (
                   <AgentPanel
