@@ -31,6 +31,8 @@ export default function ResearchPage() {
   const [warRoom, setWarRoom] = useState<WarRoom>({})
   const [campaignStatus, setCampaignStatus] = useState<string>('researching')
 
+  const DONE_STATUSES = ['awaiting_path', 'specialist', 'challenge', 'measuring', 'awaiting_review', 'complete']
+
   // Load initial state from DB (for page refreshes)
   useEffect(() => {
     getCampaign(id).then((campaign) => {
@@ -44,10 +46,21 @@ export default function ResearchPage() {
           }))
         }
       }
-      if (['awaiting_path', 'specialist', 'challenge', 'awaiting_review', 'complete'].includes(campaign.status)) {
+      if (DONE_STATUSES.includes(campaign.status)) {
         router.push(`/campaigns/${id}/creative`)
       }
     })
+  }, [id, router])
+
+  // Polling fallback — redirects even if SSE drops
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const campaign = await getCampaign(id)
+      if (DONE_STATUSES.includes(campaign.status)) {
+        router.push(`/campaigns/${id}/creative`)
+      }
+    }, 8000)
+    return () => clearInterval(interval)
   }, [id, router])
 
   const handleEvent = useCallback((event: CampaignEvent) => {
