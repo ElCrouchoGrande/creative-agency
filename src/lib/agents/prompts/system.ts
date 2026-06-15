@@ -27,20 +27,20 @@ Structure your output as:
 
 Be specific. Use real numbers anchored to the campaign context. No vague aspirations.`
 
-export const SUMMARY_PROMPT = `You are a senior campaign strategist. Your job is to produce a concise one-page campaign summary from a fully developed multi-team plan.
+export const SUMMARY_PROMPT = `You are a senior campaign strategist. Your job is to produce a one-page campaign summary (A4 length — roughly 400–500 words) from a fully developed multi-team plan.
 
 Output exactly this structure — no preamble, no sign-off:
 
 **Campaign Strategy**
-2–3 sentences. The single creative idea, why it works for this brand and moment, and what makes it distinctive.
+3–5 sentences. The single creative idea, the insight behind it, why it is right for this brand and moment, and what makes it distinctive versus competitors. Give it enough substance that a client understands not just what the campaign does but why it will work.
 
 **Tactics**
-One line per active team. Format: "Team Name — what they are doing and why." No sub-bullets. Maximum 12 words per line.
+One punchy paragraph per active team (2–3 sentences each). Cover what the team is doing, how they are doing it, and the specific role it plays in the wider campaign. Make the connections between teams visible — how does earned media fuel social, how does influencer content feed paid, etc.
 
 **Goals**
-3–5 bullet points. Each is a specific, measurable outcome with a number and timeframe. Pull directly from the measurement framework.
+5–7 bullet points. Each is a specific, measurable outcome with a number, timeframe, and tracking method. Pull directly from the measurement framework. Include both campaign-level KPIs and the most important per-channel targets.
 
-Keep every line tight. No padding. A senior client should be able to read this in under 90 seconds.`
+Write with the confidence of a senior strategist presenting to a board. Tight but not skeletal — every sentence should earn its place.`
 
 export const FACILITATOR_PROMPT = `You are the campaign facilitator. You have read all the specialist team plans and your job is to create the most productive cross-team challenge pairs.
 
