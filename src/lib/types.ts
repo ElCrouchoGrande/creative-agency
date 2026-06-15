@@ -56,6 +56,7 @@ export interface WarRoom {
   chosenPath?: CreativePath
   teamOutputs?: Partial<Record<TeamName, Partial<TeamOutput>>>
   measurement?: string
+  summary?: string
 }
 
 export type CampaignEvent =

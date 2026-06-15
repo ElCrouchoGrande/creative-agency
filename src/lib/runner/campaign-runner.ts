@@ -6,6 +6,7 @@ import { runOrchestrator } from '@/lib/agents/orchestrator'
 import { runAllSpecialistTeams } from '@/lib/agents/specialist'
 import { runFacilitatorPhase } from '@/lib/agents/facilitator'
 import { runMeasurementPhase } from '@/lib/agents/measurement'
+import { runSummaryPhase } from '@/lib/agents/summary'
 import type { CampaignStatus } from '@/lib/types'
 
 async function setStatus(campaignId: string, status: CampaignStatus): Promise<void> {
@@ -41,6 +42,7 @@ export async function runCampaignPostApproval(campaignId: string): Promise<void>
 
     await setStatus(campaignId, 'measuring')
     await runMeasurementPhase(campaignId)
+    await runSummaryPhase(campaignId)
 
     // Pause for client review
     await setStatus(campaignId, 'awaiting_review')

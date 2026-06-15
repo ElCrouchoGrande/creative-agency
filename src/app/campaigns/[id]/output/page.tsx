@@ -29,6 +29,10 @@ export default function OutputPage() {
     lines.push(`# Campaign: ${campaign.brief.goal}`)
     lines.push(`\n**Brand:** ${campaign.brief.brand}`)
     lines.push(`**Audience:** ${campaign.brief.audience}`)
+    if (warRoom.summary) {
+      lines.push('\n## Campaign Summary')
+      lines.push(warRoom.summary)
+    }
     if (warRoom.chosenPath) {
       lines.push(`\n## Creative Path: ${warRoom.chosenPath.concept}`)
       lines.push(warRoom.chosenPath.rationale)
@@ -90,6 +94,18 @@ export default function OutputPage() {
           {copying ? 'Copied!' : 'Copy as Markdown'}
         </button>
       </div>
+
+      {warRoom.summary && (
+        <div className="mb-8 border-2 border-gray-900 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 bg-gray-900 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white">Campaign Summary</h3>
+            <span className="text-xs text-gray-400">Strategy · Tactics · Goals</span>
+          </div>
+          <div className="p-5">
+            <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{warRoom.summary}</p>
+          </div>
+        </div>
+      )}
 
       {warRoom.chosenPath && (
         <div className="mb-8 p-5 bg-gray-900 text-white rounded-xl">
