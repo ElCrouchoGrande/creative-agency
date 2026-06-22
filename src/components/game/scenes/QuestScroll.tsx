@@ -58,7 +58,7 @@ export function QuestScroll() {
             style={fieldStyle}
             value={brief.brand}
             onChange={(e) => setBrief((b) => ({ ...b, brand: e.target.value }))}
-            placeholder="e.g. Darktrace"
+            placeholder="e.g. Acme Corp"
             required
           />
 
