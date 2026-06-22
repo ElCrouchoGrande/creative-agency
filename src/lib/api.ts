@@ -28,7 +28,14 @@ export async function createCampaign(brief: Brief): Promise<{ id: string }> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(brief),
   })
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) {
+    let message = 'Something went wrong. Try again.'
+    try {
+      const json = await res.json()
+      if (json.error) message = json.error
+    } catch { /* ignore */ }
+    throw new Error(message)
+  }
   return res.json()
 }
 

@@ -44,6 +44,8 @@ export async function runAgent(options: AgentRunOptions): Promise<string> {
   campaignEvents.emit(campaignId, { type: 'agent_start', team, agent, phase })
 
   try {
+    const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    const datedSystemPrompt = `Today's date is ${today}.\n\n${systemPrompt}`
     let currentMessages = [...messages]
     let finalOutput = ''
     let tokensUsed = 0
@@ -52,7 +54,7 @@ export async function runAgent(options: AgentRunOptions): Promise<string> {
       const stream = anthropic.messages.stream({
         model,
         max_tokens: 4096,
-        system: systemPrompt,
+        system: datedSystemPrompt,
         messages: currentMessages,
         tools: tools.length > 0 ? tools : undefined,
       })

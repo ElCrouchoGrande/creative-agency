@@ -1,5 +1,6 @@
 import type { MessageParam } from '@anthropic-ai/sdk/resources'
 import { runAgent } from './runner'
+import { handleToolCall, WEB_SEARCH_TOOL } from './tools'
 import { SPECIALIST_PROMPTS } from './prompts/specialist'
 import { MODEL, TEAM_CONVERSATION_TURNS } from '@/lib/config'
 import { db } from '@/lib/db'
@@ -38,7 +39,7 @@ Write your team's campaign plan.`
 
   // Turn 1: Strategist opens
   messages.push({ role: 'user', content: context })
-  // Turn 1: strategist thinks and plans — no war room writes yet
+  // Turn 1: strategist researches and plans — web search only, no war room writes yet
   const strategistOutput = await runAgent({
     campaignId,
     phase: 'specialist',
@@ -47,6 +48,8 @@ Write your team's campaign plan.`
     model: MODEL.specialist,
     systemPrompt: prompts.strategist,
     messages: [...messages],
+    tools: [WEB_SEARCH_TOOL],
+    onToolCall: (name, input) => handleToolCall(name, input, campaignId),
   })
   messages.push({ role: 'assistant', content: strategistOutput })
 
