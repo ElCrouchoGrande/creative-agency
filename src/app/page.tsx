@@ -1,51 +1,119 @@
 import Link from 'next/link'
-import { listCampaigns } from '@/lib/api'
-import { StatusBadge } from '@/components/StatusBadge'
-import type { CampaignStatus } from '@/lib/types'
+import { db } from '@/lib/db'
+import type { Brief } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
+interface CampaignSummary {
+  id: string
+  status: string
+  brief: Brief
+  createdAt: Date
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  briefing:       'BRIEFING',
+  researching:    'RESEARCHING',
+  creative:       'CREATIVE',
+  awaiting_path:  'CHOOSE PATH',
+  specialist:     'TEAMS AT WORK',
+  challenge:      'CHALLENGE',
+  measuring:      'MEASURING',
+  awaiting_review:'REVIEW',
+  complete:       'COMPLETE',
+}
+
 export default async function HomePage() {
-  let campaigns: Awaited<ReturnType<typeof listCampaigns>> = []
+  let campaigns: CampaignSummary[] = []
   try {
-    campaigns = await listCampaigns()
+    const rows = await db.campaign.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, status: true, brief: true, createdAt: true },
+    })
+    campaigns = rows.map((r) => ({ ...r, brief: JSON.parse(r.brief) as Brief }))
   } catch {
-    // DB not ready yet — show empty state
+    // DB not ready yet
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Campaigns</h1>
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 18px' }}>
+      {/* HUD bar */}
+      <div style={{
+        background: 'var(--hud)', color: 'var(--hud-ink)',
+        borderBottom: '4px solid var(--ink)',
+        boxShadow: '0 4px 0 rgba(0,0,0,.4)',
+        padding: '12px 16px', marginBottom: 24,
+        display: 'flex', alignItems: 'center', gap: 16,
+      }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: 1 }}>♛ BRANDS BY BOWSER</span>
+        <span style={{ flex: 1 }} />
+        <Link
+          href="/campaigns/new"
+          style={{
+            fontFamily: 'var(--font-display)', fontSize: 9,
+            padding: '8px 12px', background: 'var(--accent)', color: '#241405',
+            border: '2px solid var(--ink)', textDecoration: 'none',
+          }}
+        >
+          ▶ NEW CAMPAIGN
+        </Link>
       </div>
 
       {campaigns.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-gray-500 mb-4">No campaigns yet.</p>
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 22, color: 'var(--ink-dim)', marginBottom: 24 }}>
+            No campaigns yet. Deploy your first team.
+          </div>
           <Link
             href="/campaigns/new"
-            className="bg-gray-900 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            style={{
+              fontFamily: 'var(--font-display)', fontSize: 10,
+              padding: '12px 20px', background: 'var(--accent)', color: '#241405',
+              border: '3px solid var(--ink)', textDecoration: 'none',
+              boxShadow: '4px 4px 0 rgba(0,0,0,.3)',
+            }}
           >
-            Start your first campaign
+            ▶ START FIRST CAMPAIGN
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {campaigns.map((campaign) => (
             <Link
               key={campaign.id}
-              href={getCampaignHref(campaign.id, campaign.status)}
-              className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+              href={`/campaigns/${campaign.id}`}
+              style={{ textDecoration: 'none' }}
             >
-              <div>
-                <p className="text-sm font-medium text-gray-900">{campaign.brief.goal}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{campaign.brief.brand}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={campaign.status} />
-                <span className="text-xs text-gray-400">
-                  {new Date(campaign.createdAt).toLocaleDateString()}
-                </span>
+              <div style={{
+                background: 'var(--panel)', border: '4px solid var(--ink)',
+                boxShadow: 'inset 3px 3px 0 var(--border-light), inset -3px -3px 0 var(--border-dark), 4px 4px 0 rgba(0,0,0,.25)',
+                padding: '14px 18px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                cursor: 'pointer',
+              }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--ink)', marginBottom: 4 }}>
+                    {campaign.brief.goal}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--ink-dim)' }}>
+                    {campaign.brief.brand}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{
+                    fontFamily: 'var(--font-display)', fontSize: 7,
+                    padding: '4px 8px',
+                    background: campaign.status === 'complete' ? 'var(--led-done)' :
+                                campaign.status === 'awaiting_review' ? 'var(--led-run)' :
+                                'var(--ink)',
+                    color: '#fff',
+                  }}>
+                    {STATUS_LABELS[campaign.status] ?? campaign.status.toUpperCase()}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--ink-dim)' }}>
+                    {new Date(campaign.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
             </Link>
           ))}
@@ -53,23 +121,4 @@ export default async function HomePage() {
       )}
     </div>
   )
-}
-
-function getCampaignHref(id: string, status: CampaignStatus): string {
-  switch (status) {
-    case 'briefing':
-    case 'researching':
-    case 'creative':
-      return `/campaigns/${id}/research`
-    case 'awaiting_path':
-      return `/campaigns/${id}/creative`
-    case 'specialist':
-    case 'challenge':
-    case 'awaiting_review':
-      return `/campaigns/${id}/teams`
-    case 'complete':
-      return `/campaigns/${id}/output`
-    default:
-      return `/campaigns/${id}/research`
-  }
 }

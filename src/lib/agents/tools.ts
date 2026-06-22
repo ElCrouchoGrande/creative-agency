@@ -81,7 +81,8 @@ function setNestedValue(obj: Record<string, unknown>, path: string, value: unkno
 export async function handleToolCall(
   name: string,
   input: Record<string, unknown>,
-  campaignId: string
+  campaignId: string,
+  allowedWritePaths?: string[]
 ): Promise<string> {
   if (name === 'web_search') {
     const query = input.query as string
@@ -114,6 +115,14 @@ export async function handleToolCall(
   if (name === 'write_war_room') {
     const path = input.path as string
     const content = input.content as string
+
+    if (
+      allowedWritePaths &&
+      !allowedWritePaths.some((allowed) => path === allowed || path.startsWith(allowed + '.'))
+    ) {
+      return `Error: write path '${path}' is not permitted for this agent`
+    }
+
     const campaign = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
     const warRoom = JSON.parse(campaign.warRoom) as Record<string, unknown>
     setNestedValue(warRoom, path, content)

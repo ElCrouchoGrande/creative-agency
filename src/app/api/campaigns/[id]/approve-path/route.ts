@@ -3,6 +3,9 @@ import { db } from '@/lib/db'
 import { runCampaignPostApproval } from '@/lib/runner/campaign-runner'
 import type { WarRoom } from '@/lib/types'
 
+const ACTIVE_STATUSES = ['researching', 'creative', 'specialist', 'challenge', 'measuring']
+const MAX_CONCURRENT = 2
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -21,6 +24,14 @@ export async function POST(
     )
   }
 
+  const active = await db.campaign.count({ where: { status: { in: ACTIVE_STATUSES } } })
+  if (active >= MAX_CONCURRENT) {
+    return NextResponse.json(
+      { error: 'The war room is full. Try again in a few minutes.' },
+      { status: 429 }
+    )
+  }
+
   const warRoom = JSON.parse(campaign.warRoom) as WarRoom
   const rawPaths = warRoom.creativePaths
   let chosen: import('@/lib/types').CreativePath | undefined
@@ -29,9 +40,22 @@ export async function POST(
   } else if (rawPaths && typeof rawPaths === 'object') {
     // Agents write paths as {A: ..., B: ..., C: ...} with JSON string values
     const raw = (rawPaths as Record<string, unknown>)[pathId]
-    chosen = typeof raw === 'string' ? JSON.parse(raw) : (raw as import('@/lib/types').CreativePath)
+    if (typeof raw === 'string') {
+      try {
+        chosen = JSON.parse(raw)
+      } catch {
+        return NextResponse.json({ error: 'Creative path data is malformed' }, { status: 422 })
+      }
+    } else {
+      chosen = raw as import('@/lib/types').CreativePath
+    }
   }
-  if (!chosen) {
+  if (
+    !chosen ||
+    typeof chosen.id !== 'string' ||
+    typeof chosen.concept !== 'string' ||
+    typeof chosen.rationale !== 'string'
+  ) {
     return NextResponse.json({ error: `Creative path ${pathId} not found` }, { status: 404 })
   }
 

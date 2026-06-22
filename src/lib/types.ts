@@ -9,6 +9,18 @@ export type TeamName =
   | 'content'
   | 'investor_relations'
 
+export const TEAM_NAMES: TeamName[] = [
+  'earned_media',
+  'social',
+  'employee_engagement',
+  'public_affairs',
+  'field_marketing',
+  'influencer',
+  'paid_media',
+  'content',
+  'investor_relations',
+]
+
 export type AgentRunStatus = 'pending' | 'running' | 'complete' | 'failed'
 
 export type CampaignStatus =

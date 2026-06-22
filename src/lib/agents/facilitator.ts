@@ -78,7 +78,8 @@ export async function runFacilitatorPhase(campaignId: string): Promise<void> {
           },
         ],
         tools: [WRITE_WAR_ROOM_TOOL],
-        onToolCall: (name, input) => handleToolCall(name, input, campaignId),
+        onToolCall: (name, input) =>
+          handleToolCall(name, input, campaignId, [`teamOutputs.${challenged}.challengeResponse`]),
       })
     })
   )

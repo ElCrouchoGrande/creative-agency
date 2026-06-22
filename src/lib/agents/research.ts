@@ -20,8 +20,8 @@ Audience: ${brief.audience}
 Background: ${brief.background}
 ${brief.urls?.length > 0 ? `Reference URLs: ${brief.urls.join(', ')}` : ''}`
 
-  const makeToolHandler = (id: string) => (name: string, input: Record<string, unknown>) =>
-    handleToolCall(name, input, id)
+  const makeToolHandler = (id: string, allowedPaths: string[]) => (name: string, input: Record<string, unknown>) =>
+    handleToolCall(name, input, id, allowedPaths)
 
   // Landscape Analyst and Trend Spotter run in parallel
   await Promise.allSettled([
@@ -34,7 +34,7 @@ ${brief.urls?.length > 0 ? `Reference URLs: ${brief.urls.join(', ')}` : ''}`
       systemPrompt: LANDSCAPE_ANALYST_PROMPT,
       messages: [{ role: 'user', content: briefText }],
       tools: [WEB_SEARCH_TOOL, WRITE_WAR_ROOM_TOOL],
-      onToolCall: makeToolHandler(campaignId),
+      onToolCall: makeToolHandler(campaignId, ['research.landscape']),
     }),
     runAgent({
       campaignId,
@@ -45,7 +45,7 @@ ${brief.urls?.length > 0 ? `Reference URLs: ${brief.urls.join(', ')}` : ''}`
       systemPrompt: TREND_SPOTTER_PROMPT,
       messages: [{ role: 'user', content: briefText }],
       tools: [WEB_SEARCH_TOOL, WRITE_WAR_ROOM_TOOL],
-      onToolCall: makeToolHandler(campaignId),
+      onToolCall: makeToolHandler(campaignId, ['research.trends']),
     }),
   ])
 
@@ -67,6 +67,6 @@ ${brief.urls?.length > 0 ? `Reference URLs: ${brief.urls.join(', ')}` : ''}`
       },
     ],
     tools: [WRITE_WAR_ROOM_TOOL],
-    onToolCall: makeToolHandler(campaignId),
+    onToolCall: makeToolHandler(campaignId, ['research.whiteSpace', 'research.synthesis']),
   })
 }

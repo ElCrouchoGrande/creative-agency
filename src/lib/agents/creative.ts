@@ -1,5 +1,5 @@
 import { runAgent } from './runner'
-import { handleToolCall, WRITE_WAR_ROOM_TOOL } from './tools'
+import { handleToolCall, WRITE_WAR_ROOM_TOOL, WEB_SEARCH_TOOL } from './tools'
 import { CREATIVE_STRATEGIST_PROMPTS } from './prompts/creative'
 import { MODEL } from '@/lib/config'
 import { db } from '@/lib/db'
@@ -20,8 +20,8 @@ ${JSON.stringify(warRoom.research ?? {}, null, 2)}
 
 Propose your creative path now.`
 
-  const makeToolHandler = (id: string) => (name: string, input: Record<string, unknown>) =>
-    handleToolCall(name, input, id)
+  const makeToolHandler = (id: string, allowedPaths: string[]) => (name: string, input: Record<string, unknown>) =>
+    handleToolCall(name, input, id, allowedPaths)
 
   await Promise.allSettled([
     runAgent({
@@ -32,8 +32,8 @@ Propose your creative path now.`
       model: MODEL.creative,
       systemPrompt: CREATIVE_STRATEGIST_PROMPTS.A,
       messages: [{ role: 'user', content: context }],
-      tools: [WRITE_WAR_ROOM_TOOL],
-      onToolCall: makeToolHandler(campaignId),
+      tools: [WEB_SEARCH_TOOL, WRITE_WAR_ROOM_TOOL],
+      onToolCall: makeToolHandler(campaignId, ['creativePaths.A']),
     }),
     runAgent({
       campaignId,
@@ -43,8 +43,8 @@ Propose your creative path now.`
       model: MODEL.creative,
       systemPrompt: CREATIVE_STRATEGIST_PROMPTS.B,
       messages: [{ role: 'user', content: context }],
-      tools: [WRITE_WAR_ROOM_TOOL],
-      onToolCall: makeToolHandler(campaignId),
+      tools: [WEB_SEARCH_TOOL, WRITE_WAR_ROOM_TOOL],
+      onToolCall: makeToolHandler(campaignId, ['creativePaths.B']),
     }),
     runAgent({
       campaignId,
@@ -54,8 +54,8 @@ Propose your creative path now.`
       model: MODEL.creative,
       systemPrompt: CREATIVE_STRATEGIST_PROMPTS.C,
       messages: [{ role: 'user', content: context }],
-      tools: [WRITE_WAR_ROOM_TOOL],
-      onToolCall: makeToolHandler(campaignId),
+      tools: [WEB_SEARCH_TOOL, WRITE_WAR_ROOM_TOOL],
+      onToolCall: makeToolHandler(campaignId, ['creativePaths.C']),
     }),
   ])
 }

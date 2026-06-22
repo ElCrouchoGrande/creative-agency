@@ -63,12 +63,3 @@ export async function POST(req: Request) {
   return NextResponse.json({ id: campaign.id, status: campaign.status }, { status: 201 })
 }
 
-export async function GET() {
-  const campaigns = await db.campaign.findMany({
-    orderBy: { createdAt: 'desc' },
-    select: { id: true, status: true, brief: true, createdAt: true },
-  })
-  return NextResponse.json(
-    campaigns.map((c: (typeof campaigns)[number]) => ({ ...c, brief: JSON.parse(c.brief) }))
-  )
-}
