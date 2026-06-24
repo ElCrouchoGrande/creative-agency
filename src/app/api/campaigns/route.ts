@@ -38,13 +38,15 @@ export async function POST(req: Request) {
     )
   }
 
-  // IP rate limit — 1 campaign per IP per 24 hours
-  const ip = getIp(req)
-  if (!checkIpLimit(ip).allowed) {
-    return NextResponse.json(
-      { error: 'Daily briefing limit reached. Return tomorrow.' },
-      { status: 429 }
-    )
+  // IP rate limit — 1 campaign per IP per 24 hours (disabled in development)
+  if (process.env.NODE_ENV !== 'development') {
+    const ip = getIp(req)
+    if (!checkIpLimit(ip).allowed) {
+      return NextResponse.json(
+        { error: 'Daily briefing limit reached. Return tomorrow.' },
+        { status: 429 }
+      )
+    }
   }
 
   const campaign = await db.campaign.create({
