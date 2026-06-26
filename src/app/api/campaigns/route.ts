@@ -29,13 +29,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Maximum 5 reference URLs.' }, { status: 400 })
   }
 
-  // Check concurrency first so a full war room doesn't burn the user's daily attempt
-  const active = await db.campaign.count({ where: { status: { in: ACTIVE_STATUSES } } })
-  if (active >= MAX_CONCURRENT) {
-    return NextResponse.json(
-      { error: 'The war room is full. Try again in a few minutes.' },
-      { status: 429 }
-    )
+  // Check concurrency first so a full war room doesn't burn the user's daily attempt (disabled in development)
+  if (process.env.NODE_ENV !== 'development') {
+    const active = await db.campaign.count({ where: { status: { in: ACTIVE_STATUSES } } })
+    if (active >= MAX_CONCURRENT) {
+      return NextResponse.json(
+        { error: 'The war room is full. Try again in a few minutes.' },
+        { status: 429 }
+      )
+    }
   }
 
   // IP rate limit — 1 campaign per IP per 24 hours (disabled in development)
