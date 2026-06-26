@@ -4,6 +4,10 @@ import type { Brief } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
+// Campaigns created before this date are shown as examples on the public homepage.
+// New submissions from visitors are kept private.
+const EXAMPLE_CUTOFF = new Date('2026-06-26T00:00:00.000Z')
+
 interface CampaignSummary {
   id: string
   status: string
@@ -29,6 +33,9 @@ export default async function HomePage() {
     const rows = await db.campaign.findMany({
       orderBy: { createdAt: 'desc' },
       select: { id: true, status: true, brief: true, createdAt: true },
+      where: process.env.NODE_ENV !== 'development'
+        ? { createdAt: { lt: EXAMPLE_CUTOFF } }
+        : undefined,
     })
     campaigns = rows.map((r) => ({ ...r, brief: JSON.parse(r.brief) as Brief }))
   } catch {
