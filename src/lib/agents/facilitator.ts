@@ -51,7 +51,7 @@ export async function runFacilitatorPhase(campaignId: string): Promise<void> {
     challengePairs.map(async ({ challenger, challenged }) => {
       const challengerDraft = warRoom.teamOutputs?.[challenger]?.draft ?? ''
 
-      const challengeInput = `The ${challenger.replace(/_/g, ' ')} team is approaching this campaign as follows:\n\n${challengerDraft}\n\nReview their angle against yours and write a complete revised version of your own plan — a full deliverable, not feedback or critique.`
+      const challengeInput = `The ${challenger.replace(/_/g, ' ')} team is approaching this campaign as follows:\n\n${challengerDraft}\n\nRead their plan carefully. Identify: (1) one assumption in your own plan that their approach calls into question, (2) one specific thing they are doing that your plan should connect to or account for, and (3) one place where the tension between your two approaches can become a sharper, more integrated campaign moment.\n\nThen write a complete revised version of your own plan that reflects these adjustments — a full deliverable, not a commentary.`
 
       // Write challengeInput to war room
       const current = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
@@ -70,7 +70,9 @@ export async function runFacilitatorPhase(campaignId: string): Promise<void> {
         team: challenged,
         agent: 'challenge_response',
         model: MODEL.specialist,
-        systemPrompt: `You are the ${challenged.replace(/_/g, ' ')} team. You have just received a challenge from another team. Respond specifically and sharpen your plan.`,
+        systemPrompt: `You are the ${challenged.replace(/_/g, ' ')} team strategist. A peer team has reviewed the same campaign from their vantage point and their approach puts pressure on yours. Your job is to genuinely reconsider your plan in light of what they are doing — not to restate what you already wrote with minor tweaks.
+
+Be specific about what changes and why. The revised plan must be meaningfully different from your original in at least one substantive way: a changed assumption, a new integration point, a sharpened angle, or a deliverable that now explicitly connects to the challenger's work.`,
         messages: [
           {
             role: 'user',

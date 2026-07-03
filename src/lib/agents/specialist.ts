@@ -56,7 +56,7 @@ Write your team's campaign plan.`
   // Turn 2: Specialist challenges
   messages.push({
     role: 'user',
-    content: 'Review this plan critically. What specific elements are weak or too generic? Push back hard with concrete examples.',
+    content: 'The strategist has submitted their plan. Your role is to audit it for failures — not to summarise strengths. Use the PROBLEM / WHY IT FAILS / WHAT STRONG LOOKS LIKE format for every issue you find. Assume there are at least three significant weaknesses.',
   })
   const specialistOutput = await runAgent({
     campaignId,
@@ -75,7 +75,14 @@ Write your team's campaign plan.`
   if (TEAM_CONVERSATION_TURNS >= 3) {
     messages.push({
       role: 'user',
-      content: `The specialist has reviewed your plan and given feedback above. Now write the complete, final ${teamName} plan incorporating their suggestions. Output the full plan as your response — do not summarise the feedback or critique the previous version. Write the deliverable.`,
+      content: `The specialist has identified failures in your plan above. Address each one explicitly before writing the revised version.
+
+Start with a brief list: for each weakness the specialist named, one sentence on the specific change you are making in response. Then write the complete, final plan.
+
+Requirements for the final plan:
+- Quote the chosen creative path concept at the top to anchor everything that follows
+- Every recommendation must include a specific number, format, named output, or timeframe — no generic guidance
+- If a sentence could appear word-for-word in a plan for a different brand or campaign, cut it`,
     })
     const closingOutput = await runAgent({
       campaignId,
