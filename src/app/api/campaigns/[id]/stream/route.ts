@@ -6,22 +6,33 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const encoder = new TextEncoder()
+  const enc = new TextEncoder()
 
   const stream = new ReadableStream({
     start(controller) {
-      const send = (event: CampaignEvent) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
+      let eventId = 0
+
+      // Initial comment — no id needed
+      controller.enqueue(enc.encode(`: connected\n\n`))
+
+      // Heartbeat prevents proxy/load-balancer timeouts on long-running campaigns
+      const heartbeat = setInterval(() => {
+        try { controller.enqueue(enc.encode(': heartbeat\n\n')) } catch { /* closed */ }
+      }, 30000)
+
+      const listener = (event: CampaignEvent) => {
+        eventId++
+        try {
+          controller.enqueue(enc.encode(`id: ${eventId}\ndata: ${JSON.stringify(event)}\n\n`))
+        } catch { /* stream closed */ }
       }
 
-      // Heartbeat so client knows connection is alive
-      controller.enqueue(encoder.encode(`: connected\n\n`))
-
-      campaignEvents.on(id, send)
+      campaignEvents.on(id, listener)
 
       req.signal.addEventListener('abort', () => {
-        campaignEvents.off(id, send)
-        controller.close()
+        clearInterval(heartbeat)
+        campaignEvents.off(id, listener)
+        try { controller.close() } catch { /* already closed */ }
       })
     },
   })
