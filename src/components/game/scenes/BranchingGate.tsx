@@ -13,12 +13,20 @@ interface BranchingGateProps {
 export function BranchingGate({ state, approvePath }: BranchingGateProps) {
   const [selected, setSelected] = useState<'A' | 'B' | 'C' | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [confirmError, setConfirmError] = useState<string | null>(null)
   const paths = state.creativePaths
 
   async function handleConfirm() {
     if (!selected) return
     setConfirming(true)
-    await approvePath(selected)
+    setConfirmError(null)
+    try {
+      await approvePath(selected)
+    } catch (e) {
+      setConfirmError(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
+    } finally {
+      setConfirming(false)
+    }
   }
 
   if (!paths.length) {
@@ -87,6 +95,11 @@ export function BranchingGate({ state, approvePath }: BranchingGateProps) {
           <PixelButton onClick={handleConfirm} disabled={confirming}>
             {confirming ? 'DEPLOYING TEAMS…' : `▶ CONFIRM PATH ${selected}`}
           </PixelButton>
+          {confirmError && (
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: 9, color: 'var(--error, #c0392b)', marginTop: 10, letterSpacing: 1 }}>
+              ✕ {confirmError}
+            </p>
+          )}
           <p style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--ink-dim)', marginTop: 10 }}>
             Teams will enter the building and start work immediately.
           </p>
