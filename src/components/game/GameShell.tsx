@@ -1,6 +1,7 @@
 'use client'
 
 import { ReactNode } from 'react'
+import Link from 'next/link'
 import type { CampaignStatus } from '@/lib/types'
 import { DialogueBox } from './DialogueBox'
 import { CampaignProvider, useCampaignContext } from './CampaignContext'
@@ -9,6 +10,7 @@ import type { CampaignClientState } from '@/lib/game/campaignReducer'
 interface GameShellProps {
   state: CampaignClientState
   children: ReactNode
+  connected?: boolean
 }
 
 const STATUS_LABELS: Record<CampaignStatus, string> = {
@@ -21,17 +23,18 @@ const STATUS_LABELS: Record<CampaignStatus, string> = {
   measuring:      'MEASURING',
   awaiting_review:'REVIEW',
   complete:       'COMPLETE',
+  failed:         'FAILED',
 }
 
-export function GameShell({ state, children }: GameShellProps) {
+export function GameShell({ state, children, connected }: GameShellProps) {
   return (
     <CampaignProvider>
-      <GameShellInner state={state}>{children}</GameShellInner>
+      <GameShellInner state={state} connected={connected}>{children}</GameShellInner>
     </CampaignProvider>
   )
 }
 
-function GameShellInner({ state, children }: GameShellProps) {
+function GameShellInner({ state, children, connected }: GameShellProps) {
   const { unpin } = useCampaignContext()
   const narration = state.currentNarration
 
@@ -46,7 +49,9 @@ function GameShellInner({ state, children }: GameShellProps) {
         display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
         padding: '12px 16px',
       }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: 1 }}>♛ BRANDS BY BOWSER</span>
+        <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: 1 }}>♛ BRANDS BY BOWSER</span>
+        </Link>
         <span style={{
           fontFamily: 'var(--font-body)', fontSize: 16, opacity: .9,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -62,6 +67,14 @@ function GameShellInner({ state, children }: GameShellProps) {
         }}>
           {STATUS_LABELS[state.status] ?? state.status.toUpperCase()}
         </span>
+        {/* SSE connection status */}
+        <div style={{
+          width: 8, height: 8, borderRadius: '50%',
+          border: '2px solid rgba(255,255,255,.4)',
+          background: connected ? '#4caf50' : '#ff9800',
+          animation: connected ? 'none' : 'blip 1s steps(2) infinite',
+          flexShrink: 0,
+        }} title={connected ? 'Live' : 'Reconnecting…'} />
       </div>
 
       {/* Scene content */}

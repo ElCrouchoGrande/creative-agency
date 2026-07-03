@@ -27,6 +27,23 @@ export function IntelRoom({ state }: IntelRoomProps) {
 
   const research = state.warRoom.research as Record<string, string> | undefined
 
+  // Derive binder content for the open section
+  let binderTitle = ''
+  let binderContent = ''
+  if (openSection) {
+    if (openSection.startsWith('path_')) {
+      const pathId = openSection.slice(5) as 'A' | 'B' | 'C'
+      const path = state.creativePaths.find((p) => p.id === pathId)
+      if (path) {
+        binderTitle = `CREATIVE PATH ${pathId}`
+        binderContent = `# ${path.concept}\n\n${path.rationale}\n\n## Key Messages\n${path.keyMessages.map((m) => `- ${m}`).join('\n')}`
+      }
+    } else if (research?.[openSection]) {
+      binderTitle = openSection.replace(/([A-Z])/g, ' $1').toUpperCase()
+      binderContent = research[openSection]
+    }
+  }
+
   return (
     <div>
       <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, color: 'var(--accent2)', letterSpacing: 2, marginBottom: 8 }}>
@@ -123,8 +140,70 @@ export function IntelRoom({ state }: IntelRoomProps) {
         </div>
       </div>
 
-      {/* Research dossier — folder entries */}
-      {research ? (
+      {/* Live streaming output — creative phase only */}
+      {isCreative && (() => {
+        const runningAgent = agents.find(a => a.agentState?.status === 'running')
+        const liveOutput = runningAgent?.agentState?.output ?? ''
+        if (!liveOutput) return null
+        return (
+          <div style={{
+            marginBottom: 16,
+            padding: '12px 14px',
+            background: 'var(--panel)', border: '4px solid var(--ink)',
+            boxShadow: '4px 4px 0 rgba(0,0,0,.3)',
+            maxHeight: 180, overflowY: 'auto',
+          }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 7, color: 'var(--ink-dim)', marginBottom: 8, letterSpacing: 1 }}>
+              {agentLabel(runningAgent!.key)} · LIVE ···
+            </div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--ink)', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {liveOutput}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Dossier — phase-aware */}
+      {isCreative ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 7, color: 'var(--ink-dim)', marginBottom: 4, letterSpacing: 1 }}>
+            CREATIVE PATHS
+          </div>
+          {(['A', 'B', 'C'] as const).map((id, i) => {
+            const agentKey = CREATIVE_AGENTS[i]
+            const agentState = teamState?.agents[agentKey]
+            const isDone = agentState?.status === 'complete'
+            const path = state.creativePaths.find(p => p.id === id)
+            return (
+              <div
+                key={id}
+                onClick={() => isDone && path && setOpenSection(`path_${id}`)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 14px',
+                  background: 'var(--panel)', border: '4px solid var(--ink)',
+                  boxShadow: '4px 4px 0 rgba(0,0,0,.3)',
+                  cursor: isDone && path ? 'pointer' : 'default',
+                  opacity: isDone ? 1 : 0.5,
+                }}
+              >
+                <span style={{ fontSize: 16, flexShrink: 0 }}>🎨</span>
+                <div style={{ flex: 1, fontFamily: 'var(--font-display)', fontSize: 8 }}>
+                  PATH {id}{path ? ` · ${path.concept.slice(0, 40)}${path.concept.length > 40 ? '…' : ''}` : ''}
+                </div>
+                <div style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  border: '2px solid var(--ink)', flexShrink: 0,
+                  background: isDone ? 'var(--led-done)' : 'transparent',
+                }} />
+                {isDone && path && (
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 7, color: 'var(--hud)', flexShrink: 0 }}>▶ READ</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ) : research ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 7, color: 'var(--ink-dim)', marginBottom: 4, letterSpacing: 1 }}>
             INTEL DOSSIER
@@ -173,10 +252,10 @@ export function IntelRoom({ state }: IntelRoomProps) {
         </div>
       )}
 
-      {openSection && research?.[openSection] && (
+      {openSection && binderContent && (
         <Binder
-          title={openSection.replace(/([A-Z])/g, ' $1').toUpperCase()}
-          content={research[openSection]}
+          title={binderTitle}
+          content={binderContent}
           onClose={() => setOpenSection(null)}
         />
       )}

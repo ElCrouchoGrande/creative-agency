@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { CampaignClientState } from '@/lib/game/campaignReducer'
 import { teamLabel } from '@/lib/game/teams'
 import { PixelButton } from '../ui/PixelButton'
@@ -12,37 +12,29 @@ interface ResultsRoomProps {
   retryTeam(team: string): Promise<void>
 }
 
-function renderInline(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/)
-  if (parts.length === 1) return text
-  return parts.map((part, i) =>
-    part.startsWith('**') && part.endsWith('**')
-      ? <strong key={i}>{part.slice(2, -2)}</strong>
-      : part
-  )
-}
-
-function renderMarkdown(text: string): React.ReactNode {
-  return text.split('\n').map((line, i) => {
-    if (line.startsWith('## '))
-      return <div key={i} style={{ fontFamily: 'var(--font-display)', fontSize: 8, color: 'var(--accent2)', marginTop: 14, marginBottom: 6 }}>{line.slice(3).trim()}</div>
-    if (line.startsWith('# '))
-      return <div key={i} style={{ fontFamily: 'var(--font-display)', fontSize: 9, marginTop: 16, marginBottom: 8 }}>{line.slice(2).trim()}</div>
-    if (line.startsWith('- ') || line.startsWith('* '))
-      return <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 4 }}><span style={{ color: 'var(--accent2)', flexShrink: 0 }}>▸</span><span>{renderInline(line.slice(2))}</span></div>
-    if (line.trim() === '')
-      return <div key={i} style={{ height: 8 }} />
-    return <div key={i} style={{ marginBottom: 4 }}>{renderInline(line)}</div>
-  })
-}
-
 export function ResultsRoom({ state, retryTeam }: ResultsRoomProps) {
   const [copying, setCopying] = useState(false)
   const [regenerating, setRegenerating] = useState<Set<string>>(new Set())
   const [openTeam, setOpenTeam] = useState<string | null>(null)
-  const [openSection, setOpenSection] = useState<'summary' | 'measurement' | null>(null)
+  const [openSection, setOpenSection] = useState<'summary' | 'measurement' | 'integration' | null>(null)
   const { warRoom, activeTeams, brief } = state
   const teams = activeTeams as TeamName[]
+
+  // Clear regenerating spinner when draft arrives via state update
+  useEffect(() => {
+    if (regenerating.size === 0) return
+    setRegenerating((prev) => {
+      const next = new Set(prev)
+      let changed = false
+      for (const team of next) {
+        if (warRoom.teamOutputs?.[team as TeamName]?.draft) {
+          next.delete(team)
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [warRoom.teamOutputs, regenerating.size])
 
   function buildMarkdown() {
     const lines: string[] = []
@@ -69,6 +61,10 @@ export function ResultsRoom({ state, retryTeam }: ResultsRoomProps) {
       lines.push('\n## Measurement Framework')
       lines.push(warRoom.measurement)
     }
+    if (warRoom.integration) {
+      lines.push('\n## Campaign Integration Map')
+      lines.push(warRoom.integration)
+    }
     return lines.join('\n')
   }
 
@@ -81,12 +77,6 @@ export function ResultsRoom({ state, retryTeam }: ResultsRoomProps) {
   async function handleRegenerate(team: string) {
     setRegenerating((prev) => new Set([...prev, team]))
     await retryTeam(team)
-    const poll = setInterval(() => {
-      if (warRoom.teamOutputs?.[team as TeamName]?.draft) {
-        setRegenerating((prev) => { const n = new Set(prev); n.delete(team); return n })
-        clearInterval(poll)
-      }
-    }, 5000)
   }
 
   const teamPlan = openTeam ? (warRoom.teamOutputs?.[openTeam as TeamName]?.challengeResponse || warRoom.teamOutputs?.[openTeam as TeamName]?.draft) ?? '' : ''
@@ -99,6 +89,16 @@ export function ResultsRoom({ state, retryTeam }: ResultsRoomProps) {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, color: 'var(--accent2)', marginBottom: 6 }}>CAMPAIGN COMPLETE</div>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 14 }}>{brief.goal}</h2>
           <p style={{ fontFamily: 'var(--font-body)', fontSize: 18, color: 'var(--ink-dim)' }}>{brief.brand}</p>
+          {warRoom.campaignName && (
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, marginTop: 4, color: 'var(--accent2)' }}>
+              {warRoom.campaignName}
+            </div>
+          )}
+          {warRoom.campaignTagline && (
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--ink-dim)', marginTop: 2 }}>
+              {warRoom.campaignTagline}
+            </div>
+          )}
         </div>
         <PixelButton onClick={handleCopy}>{copying ? 'COPIED!' : '⧉ COPY MD'}</PixelButton>
       </div>
@@ -115,7 +115,7 @@ export function ResultsRoom({ state, retryTeam }: ResultsRoomProps) {
         </div>
       )}
 
-      {/* Dossier — summary, measurement, team plans as folder entries */}
+      {/* Dossier — summary, measurement, integration, team plans as folder entries */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 7, color: 'var(--ink-dim)', marginBottom: 4, letterSpacing: 1 }}>
           CAMPAIGN DOSSIER
@@ -137,6 +137,23 @@ export function ResultsRoom({ state, retryTeam }: ResultsRoomProps) {
             label="MEASUREMENT FRAMEWORK"
             onClick={() => setOpenSection('measurement')}
           />
+        )}
+
+        {/* Integration Map entry */}
+        {warRoom.integration && (
+          <div
+            onClick={() => setOpenSection('integration')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 14px', marginBottom: 8,
+              background: 'var(--panel)', border: '4px solid var(--ink)',
+              boxShadow: '4px 4px 0 rgba(0,0,0,.3)', cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: 16 }}>🔗</span>
+            <div style={{ flex: 1, fontFamily: 'var(--font-display)', fontSize: 8 }}>INTEGRATION MAP</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 7, color: 'var(--hud)' }}>▶ READ</div>
+          </div>
         )}
 
         {/* Team plan entries */}
@@ -188,6 +205,9 @@ export function ResultsRoom({ state, retryTeam }: ResultsRoomProps) {
       )}
       {openSection === 'measurement' && warRoom.measurement && (
         <Binder title="MEASUREMENT FRAMEWORK" content={warRoom.measurement} onClose={() => setOpenSection(null)} />
+      )}
+      {openSection === 'integration' && warRoom.integration && (
+        <Binder title="INTEGRATION MAP" content={warRoom.integration} onClose={() => setOpenSection(null)} />
       )}
       {openTeam && teamPlan && (
         <Binder
