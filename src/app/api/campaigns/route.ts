@@ -28,6 +28,14 @@ export async function POST(req: Request) {
   if ((body.urls ?? []).length > 5) {
     return NextResponse.json({ error: 'Maximum 5 reference URLs.' }, { status: 400 })
   }
+  for (const url of body.urls ?? []) {
+    try {
+      const u = new URL(url)
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error()
+    } catch {
+      return NextResponse.json({ error: 'Reference URLs must be valid http or https URLs.' }, { status: 400 })
+    }
+  }
 
   // Check concurrency first so a full war room doesn't burn the user's daily attempt (disabled in development)
   if (process.env.NODE_ENV !== 'development') {

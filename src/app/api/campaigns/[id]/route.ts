@@ -17,7 +17,12 @@ export async function GET(
       warRoom: JSON.parse(campaign.warRoom),
       activeTeams: JSON.parse(campaign.activeTeams),
     })
-  } catch {
-    return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+  } catch (error) {
+    // PrismaClientKnownRequestError with P2025 = record not found
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+    }
+    console.error('GET /api/campaigns/[id] error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

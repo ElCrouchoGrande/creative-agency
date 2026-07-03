@@ -13,6 +13,10 @@ export async function POST(
   const { id } = await params
   const { pathId } = (await req.json()) as { pathId: 'A' | 'B' | 'C' }
 
+  if (!['A', 'B', 'C'].includes(pathId)) {
+    return NextResponse.json({ error: 'Invalid path selection' }, { status: 400 })
+  }
+
   const campaign = await db.campaign.findUnique({ where: { id } })
   if (!campaign) {
     return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
@@ -24,12 +28,14 @@ export async function POST(
     )
   }
 
-  const active = await db.campaign.count({ where: { status: { in: ACTIVE_STATUSES } } })
-  if (active >= MAX_CONCURRENT) {
-    return NextResponse.json(
-      { error: 'The war room is full. Try again in a few minutes.' },
-      { status: 429 }
-    )
+  if (process.env.NODE_ENV !== 'development') {
+    const active = await db.campaign.count({ where: { status: { in: ACTIVE_STATUSES } } })
+    if (active >= MAX_CONCURRENT) {
+      return NextResponse.json(
+        { error: 'The war room is full. Try again in a few minutes.' },
+        { status: 429 }
+      )
+    }
   }
 
   const warRoom = JSON.parse(campaign.warRoom) as WarRoom

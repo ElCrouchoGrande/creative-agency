@@ -24,3 +24,12 @@ export const ALL_TEAMS: TeamName[] = [
   'content',
   'investor_relations',
 ]
+
+export function validateEnv(): void {
+  const missing: string[] = []
+  if (!process.env.ANTHROPIC_API_KEY) missing.push('ANTHROPIC_API_KEY')
+  if (!process.env.TAVILY_API_KEY) missing.push('TAVILY_API_KEY')
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
+  }
+}

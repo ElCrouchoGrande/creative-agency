@@ -33,6 +33,7 @@ export type CampaignStatus =
   | 'measuring'
   | 'awaiting_review'
   | 'complete'
+  | 'failed'
 
 export interface Brief {
   goal: string
@@ -69,6 +70,9 @@ export interface WarRoom {
   teamOutputs?: Partial<Record<TeamName, Partial<TeamOutput>>>
   measurement?: string
   summary?: string
+  campaignName?: string
+  campaignTagline?: string
+  integration?: string
 }
 
 export type CampaignEvent =
