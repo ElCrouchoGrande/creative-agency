@@ -1,6 +1,6 @@
 'use client'
 
-import { useReducer, useEffect, useCallback, useRef } from 'react'
+import { useState, useReducer, useEffect, useCallback, useRef } from 'react'
 import { getCampaign, approvePath as apiApprovePath, retryTeam as apiRetryTeam } from '@/lib/api'
 import { useSSE } from './useSSE'
 import { campaignReducer, initialState } from '@/lib/game/campaignReducer'
@@ -15,6 +15,7 @@ interface UseCampaignReturn {
   state: CampaignClientState
   loading: boolean
   error: string | null
+  connected: boolean
   approvePath(pathId: 'A' | 'B' | 'C'): Promise<void>
   retryTeam(team: string): Promise<void>
   refetch(): Promise<void>
@@ -22,25 +23,25 @@ interface UseCampaignReturn {
 
 export function useCampaign(id: string): UseCampaignReturn {
   const [state, dispatch] = useReducer(campaignReducer, initialState(id))
-  const loadingRef = useRef(true)
-  const errorRef = useRef<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const mountedRef = useRef(true)
 
   // Initial load
   useEffect(() => {
     mountedRef.current = true
-    loadingRef.current = true
+    setLoading(true)
 
     getCampaign(id)
       .then((campaign) => {
         if (!mountedRef.current) return
         dispatch({ type: 'HYDRATE', campaign })
-        loadingRef.current = false
+        setLoading(false)
       })
       .catch((e) => {
         if (!mountedRef.current) return
-        errorRef.current = String(e)
-        loadingRef.current = false
+        setError(String(e))
+        setLoading(false)
       })
 
     return () => { mountedRef.current = false }
@@ -50,7 +51,7 @@ export function useCampaign(id: string): UseCampaignReturn {
   const handleEvent = useCallback((event: CampaignEvent) => {
     dispatch({ type: 'SSE_EVENT', event })
   }, [])
-  useSSE(id, handleEvent)
+  const { connected } = useSSE(id, handleEvent)
 
   // Fast poll: 3s while active but activeTeams empty (orchestrator async gap)
   useEffect(() => {
@@ -93,8 +94,9 @@ export function useCampaign(id: string): UseCampaignReturn {
 
   return {
     state,
-    loading: loadingRef.current,
-    error: errorRef.current,
+    loading,
+    error,
+    connected,
     approvePath,
     retryTeam,
     refetch,
