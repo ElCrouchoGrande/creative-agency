@@ -13,6 +13,7 @@ export interface AgentRunOptions {
   messages: MessageParam[]
   tools?: Tool[]
   onToolCall?: (name: string, input: Record<string, unknown>) => Promise<string>
+  maxTokens?: number
 }
 
 // Wraps instantiation in a way that is compatible with vi.fn() mocks (which use arrow functions)
@@ -33,7 +34,7 @@ function makeClient(): Anthropic {
 }
 
 export async function runAgent(options: AgentRunOptions): Promise<string> {
-  const { campaignId, phase, team, agent, model, systemPrompt, messages, tools = [], onToolCall } = options
+  const { campaignId, phase, team, agent, model, systemPrompt, messages, tools = [], onToolCall, maxTokens } = options
 
   const anthropic = makeClient()
 
@@ -53,7 +54,7 @@ export async function runAgent(options: AgentRunOptions): Promise<string> {
     while (true) {
       const stream = anthropic.messages.stream({
         model,
-        max_tokens: 4096,
+        max_tokens: options.maxTokens ?? 4096,
         system: datedSystemPrompt,
         messages: currentMessages,
         tools: tools.length > 0 ? tools : undefined,

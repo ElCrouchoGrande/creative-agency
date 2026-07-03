@@ -45,6 +45,12 @@ export async function getCampaign(id: string): Promise<Campaign> {
   return res.json()
 }
 
+export async function listCampaigns(): Promise<Campaign[]> {
+  const res = await fetch('/api/campaigns', { cache: 'no-store' })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
 export async function approvePath(campaignId: string, pathId: 'A' | 'B' | 'C'): Promise<void> {
   const res = await fetch(`/api/campaigns/${campaignId}/approve-path`, {
     method: 'POST',
@@ -56,6 +62,20 @@ export async function approvePath(campaignId: string, pathId: 'A' | 'B' | 'C'): 
 
 export async function retryTeam(campaignId: string, team: string): Promise<void> {
   const res = await fetch(`/api/campaigns/${campaignId}/teams/${team}/retry`, {
+    method: 'POST',
+  })
+  if (!res.ok) throw new Error(await res.text())
+}
+
+export async function approveCreation(campaignId: string): Promise<void> {
+  const res = await fetch(`/api/campaigns/${campaignId}/approve-creation`, {
+    method: 'POST',
+  })
+  if (!res.ok) throw new Error(await res.text())
+}
+
+export async function retryCreation(campaignId: string, team: string): Promise<void> {
+  const res = await fetch(`/api/campaigns/${campaignId}/teams/${team}/retry-creation`, {
     method: 'POST',
   })
   if (!res.ok) throw new Error(await res.text())

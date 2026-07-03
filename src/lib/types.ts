@@ -30,6 +30,8 @@ export type CampaignStatus =
   | 'awaiting_path'
   | 'specialist'
   | 'challenge'
+  | 'awaiting_creation'
+  | 'creating'
   | 'measuring'
   | 'awaiting_review'
   | 'complete'
@@ -61,6 +63,8 @@ export interface TeamOutput {
   draft: string
   challengeInput: string
   challengeResponse: string
+  creation?: string
+  creationImages?: string[]
 }
 
 export interface WarRoom {

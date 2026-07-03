@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useReducer, useEffect, useCallback, useRef } from 'react'
-import { getCampaign, approvePath as apiApprovePath, retryTeam as apiRetryTeam } from '@/lib/api'
+import { useReducer, useEffect, useCallback, useRef } from 'react'
+import { getCampaign, approvePath as apiApprovePath, retryTeam as apiRetryTeam, approveCreation as apiApproveCreation, retryCreation as apiRetryCreation } from '@/lib/api'
 import { useSSE } from './useSSE'
 import { campaignReducer, initialState } from '@/lib/game/campaignReducer'
 import type { CampaignClientState } from '@/lib/game/campaignReducer'
@@ -15,33 +15,34 @@ interface UseCampaignReturn {
   state: CampaignClientState
   loading: boolean
   error: string | null
-  connected: boolean
   approvePath(pathId: 'A' | 'B' | 'C'): Promise<void>
   retryTeam(team: string): Promise<void>
+  approveCreation(): Promise<void>
+  retryCreation(team: string): Promise<void>
   refetch(): Promise<void>
 }
 
 export function useCampaign(id: string): UseCampaignReturn {
   const [state, dispatch] = useReducer(campaignReducer, initialState(id))
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const loadingRef = useRef(true)
+  const errorRef = useRef<string | null>(null)
   const mountedRef = useRef(true)
 
   // Initial load
   useEffect(() => {
     mountedRef.current = true
-    setLoading(true)
+    loadingRef.current = true
 
     getCampaign(id)
       .then((campaign) => {
         if (!mountedRef.current) return
         dispatch({ type: 'HYDRATE', campaign })
-        setLoading(false)
+        loadingRef.current = false
       })
       .catch((e) => {
         if (!mountedRef.current) return
-        setError(String(e))
-        setLoading(false)
+        errorRef.current = String(e)
+        loadingRef.current = false
       })
 
     return () => { mountedRef.current = false }
@@ -51,7 +52,7 @@ export function useCampaign(id: string): UseCampaignReturn {
   const handleEvent = useCallback((event: CampaignEvent) => {
     dispatch({ type: 'SSE_EVENT', event })
   }, [])
-  const { connected } = useSSE(id, handleEvent)
+  useSSE(id, handleEvent)
 
   // Fast poll: 3s while active but activeTeams empty (orchestrator async gap)
   useEffect(() => {
@@ -87,6 +88,15 @@ export function useCampaign(id: string): UseCampaignReturn {
     await apiRetryTeam(id, team)
   }, [id])
 
+  const approveCreation = useCallback(async () => {
+    await apiApproveCreation(id)
+    dispatch({ type: 'SSE_EVENT', event: { type: 'phase_change', status: 'creating' } })
+  }, [id])
+
+  const retryCreation = useCallback(async (team: string) => {
+    await apiRetryCreation(id, team)
+  }, [id])
+
   const refetch = useCallback(async () => {
     const campaign = await getCampaign(id)
     dispatch({ type: 'HYDRATE', campaign })
@@ -94,11 +104,12 @@ export function useCampaign(id: string): UseCampaignReturn {
 
   return {
     state,
-    loading,
-    error,
-    connected,
+    loading: loadingRef.current,
+    error: errorRef.current,
     approvePath,
     retryTeam,
+    approveCreation,
+    retryCreation,
     refetch,
   }
 }

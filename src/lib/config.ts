@@ -11,6 +11,7 @@ export const MODEL = {
   creative: 'claude-sonnet-4-6',
   specialist: 'claude-haiku-4-5-20251001',
   facilitator: 'claude-sonnet-4-6',
+  creation: 'claude-sonnet-4-6',
 } as const
 
 export const ALL_TEAMS: TeamName[] = [
@@ -31,5 +32,8 @@ export function validateEnv(): void {
   if (!process.env.TAVILY_API_KEY) missing.push('TAVILY_API_KEY')
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
+  }
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('[config] OPENAI_API_KEY not set — social team image generation will be disabled')
   }
 }

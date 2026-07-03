@@ -60,6 +60,9 @@ export const AGENT_LABELS: Record<string, string> = {
   facilitator:       'Facilitator',
   measurement:       'Measurement',
   summary:           'Summary',
+  creator:           'Creator',
+  naming:            'Naming',
+  integration:       'Integration',
 }
 
 export function agentLabel(agent: string): string {

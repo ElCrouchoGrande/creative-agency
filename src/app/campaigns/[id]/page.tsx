@@ -10,6 +10,7 @@ import { IntelRoom } from '@/components/game/scenes/IntelRoom'
 import { BranchingGate } from '@/components/game/scenes/BranchingGate'
 import { AgencyBuilding } from '@/components/game/scenes/AgencyBuilding'
 import { ResultsRoom } from '@/components/game/scenes/ResultsRoom'
+import { AwaitingCreationGate } from '@/components/game/scenes/AwaitingCreationGate'
 import type { CampaignStatus } from '@/lib/types'
 
 function sceneKey(status: CampaignStatus): string {
@@ -17,13 +18,14 @@ function sceneKey(status: CampaignStatus): string {
   if (status === 'awaiting_path') return 'gate'
   if (['specialist', 'challenge', 'measuring'].includes(status)) return 'building'
   if (status === 'awaiting_review' || status === 'complete') return 'results'
-  if (status === 'failed') return 'failed'
+  if (status === 'awaiting_creation') return 'awaiting_creation'
+  if (status === 'creating') return 'building'
   return status
 }
 
 export default function CampaignWorld() {
   const { id } = useParams<{ id: string }>()
-  const { state, loading, error, connected, approvePath, retryTeam } = useCampaign(id)
+  const { state, loading, approvePath, retryTeam, approveCreation, retryCreation } = useCampaign(id)
 
   // null = not yet initialised (prevents spurious gate on first load)
   const [displayedStatus, setDisplayedStatus] = useState<CampaignStatus | null>(null)
@@ -34,15 +36,6 @@ export default function CampaignWorld() {
       setDisplayedStatus(state.status)
     }
   }, [state.brief.brand, state.status, displayedStatus])
-
-  if (error) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16, fontFamily: 'var(--font-display)', color: 'var(--ink)' }}>
-        <div style={{ fontSize: 14 }}>✕</div>
-        <div style={{ fontSize: 10 }}>Campaign not found</div>
-      </div>
-    )
-  }
 
   if (loading && !state.brief.brand) {
     return (
@@ -59,25 +52,17 @@ export default function CampaignWorld() {
 
   const scene = (() => {
     switch (key) {
-      case 'intel':    return <IntelRoom state={displayedState} />
-      case 'gate':     return <BranchingGate state={displayedState} approvePath={approvePath} />
-      case 'building': return <AgencyBuilding state={displayedState} />
-      case 'results':  return <ResultsRoom state={displayedState} retryTeam={retryTeam} />
-      case 'failed':   return (
-        <div style={{ textAlign: 'center', padding: 60 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, marginBottom: 16 }}>✕</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--accent-red, #e53)', marginBottom: 8 }}>CAMPAIGN FAILED</div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 18, color: 'var(--ink-dim)' }}>
-            Something went wrong during the pipeline. The agents have been notified.
-          </div>
-        </div>
-      )
-      default:         return <QuestScroll />
+      case 'intel':             return <IntelRoom state={displayedState} />
+      case 'gate':              return <BranchingGate state={displayedState} approvePath={approvePath} />
+      case 'building':          return <AgencyBuilding state={displayedState} />
+      case 'results':           return <ResultsRoom state={displayedState} retryTeam={retryTeam} retryCreation={retryCreation} />
+      case 'awaiting_creation': return <AwaitingCreationGate state={displayedState} approveCreation={approveCreation} />
+      default:                  return <QuestScroll />
     }
   })()
 
   return (
-    <GameShell state={state} connected={connected}>
+    <GameShell state={state}>
       <ScreenWipe key={key} />
       {scene}
       {hasNewPhase && (

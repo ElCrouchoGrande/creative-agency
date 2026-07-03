@@ -1,6 +1,5 @@
 import type { Tool } from '@anthropic-ai/sdk/resources'
 import { db } from '@/lib/db'
-import { withCampaignLock } from '@/lib/warRoomMutex'
 
 export const WEB_SEARCH_TOOL: Tool = {
   name: 'web_search',
@@ -41,6 +40,28 @@ export const ACTIVATE_TEAMS_TOOL: Tool = {
       },
     },
     required: ['teams'],
+  },
+}
+
+export const GENERATE_IMAGE_TOOL: Tool = {
+  name: 'generate_image',
+  description: 'Generate an image using AI. Returns the image URL. Use for creating campaign visuals, social media images, etc.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      prompt: { type: 'string', description: 'Detailed description of the image to generate' },
+      size: {
+        type: 'string',
+        enum: ['1024x1024', '1792x1024', '1024x1792'],
+        description: 'Image dimensions. Default: 1024x1024',
+      },
+      style: {
+        type: 'string',
+        enum: ['vivid', 'natural'],
+        description: 'vivid = dramatic/hyper-real, natural = more realistic. Default: vivid',
+      },
+    },
+    required: ['prompt'],
   },
 }
 
@@ -124,14 +145,12 @@ export async function handleToolCall(
       return `Error: write path '${path}' is not permitted for this agent`
     }
 
-    await withCampaignLock(campaignId, async () => {
-      const campaign = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
-      const warRoom = JSON.parse(campaign.warRoom) as Record<string, unknown>
-      setNestedValue(warRoom, path, content)
-      await db.campaign.update({
-        where: { id: campaignId },
-        data: { warRoom: JSON.stringify(warRoom) },
-      })
+    const campaign = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
+    const warRoom = JSON.parse(campaign.warRoom) as Record<string, unknown>
+    setNestedValue(warRoom, path, content)
+    await db.campaign.update({
+      where: { id: campaignId },
+      data: { warRoom: JSON.stringify(warRoom) },
     })
     return `Written to war room at path: ${path}`
   }
@@ -147,6 +166,34 @@ export async function handleToolCall(
 
   if (name === 'route_challenge') {
     return JSON.stringify(input.pairs)
+  }
+
+  if (name === 'generate_image') {
+    if (!process.env.OPENAI_API_KEY) {
+      return '[Image generation unavailable — OPENAI_API_KEY not set]'
+    }
+    const prompt = input.prompt as string
+    const size = (input.size as string) ?? '1024x1024'
+    const style = (input.style as string) ?? 'vivid'
+    try {
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({ model: 'dall-e-3', prompt, size, style, n: 1 }),
+      })
+      const data = await response.json() as { data?: Array<{ url: string }>; error?: { message: string } }
+      if (!response.ok || !data.data?.[0]?.url) {
+        console.error('[generate_image] OpenAI error:', data.error?.message)
+        return `[Image generation failed: ${data.error?.message ?? 'Unknown error'}]`
+      }
+      return data.data[0].url
+    } catch (err) {
+      console.error('[generate_image] fetch failed:', err)
+      return '[Image generation unavailable (network error)]'
+    }
   }
 
   throw new Error(`Unknown tool: ${name}`)
