@@ -21,6 +21,7 @@ const STATUS_LABELS: Record<CampaignStatus, string> = {
   measuring:      'MEASURING',
   awaiting_review:'REVIEW',
   complete:       'COMPLETE',
+  failed:         'FAILED',
 }
 
 export function GameShell({ state, children }: GameShellProps) {
