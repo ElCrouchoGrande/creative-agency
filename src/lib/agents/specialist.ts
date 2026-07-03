@@ -5,14 +5,17 @@ import { SPECIALIST_PROMPTS } from './prompts/specialist'
 import { MODEL, TEAM_CONVERSATION_TURNS } from '@/lib/config'
 import { db } from '@/lib/db'
 import type { TeamName, WarRoom } from '@/lib/types'
+import { withCampaignLock } from '@/lib/warRoomMutex'
 
 async function writeTeamDraft(campaignId: string, teamName: TeamName, draft: string): Promise<void> {
-  const campaign = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
-  const warRoom = JSON.parse(campaign.warRoom) as Record<string, unknown>
-  const teamOutputs = (warRoom.teamOutputs ?? {}) as Record<string, unknown>
-  teamOutputs[teamName] = { ...(teamOutputs[teamName] as object ?? {}), draft }
-  warRoom.teamOutputs = teamOutputs
-  await db.campaign.update({ where: { id: campaignId }, data: { warRoom: JSON.stringify(warRoom) } })
+  await withCampaignLock(campaignId, async () => {
+    const campaign = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
+    const warRoom = JSON.parse(campaign.warRoom) as Record<string, unknown>
+    const teamOutputs = (warRoom.teamOutputs ?? {}) as Record<string, unknown>
+    teamOutputs[teamName] = { ...(teamOutputs[teamName] as object ?? {}), draft }
+    warRoom.teamOutputs = teamOutputs
+    await db.campaign.update({ where: { id: campaignId }, data: { warRoom: JSON.stringify(warRoom) } })
+  })
 }
 
 export async function runSpecialistTeam(campaignId: string, teamName: TeamName): Promise<void> {

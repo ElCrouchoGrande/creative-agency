@@ -4,6 +4,7 @@ import { FACILITATOR_PROMPT } from './prompts/system'
 import { MODEL } from '@/lib/config'
 import { db } from '@/lib/db'
 import type { TeamName, WarRoom } from '@/lib/types'
+import { withCampaignLock } from '@/lib/warRoomMutex'
 
 interface ChallengePair {
   challenger: TeamName
@@ -54,14 +55,16 @@ export async function runFacilitatorPhase(campaignId: string): Promise<void> {
       const challengeInput = `The ${challenger.replace(/_/g, ' ')} team is approaching this campaign as follows:\n\n${challengerDraft}\n\nRead their plan carefully. Identify: (1) one assumption in your own plan that their approach calls into question, (2) one specific thing they are doing that your plan should connect to or account for, and (3) one place where the tension between your two approaches can become a sharper, more integrated campaign moment.\n\nThen write a complete revised version of your own plan that reflects these adjustments — a full deliverable, not a commentary.`
 
       // Write challengeInput to war room
-      const current = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
-      const wr = JSON.parse(current.warRoom) as WarRoom
-      if (!wr.teamOutputs) wr.teamOutputs = {}
-      if (!wr.teamOutputs[challenged]) {
-        wr.teamOutputs[challenged] = { draft: '', challengeInput: '', challengeResponse: '' }
-      }
-      wr.teamOutputs[challenged]!.challengeInput = challengeInput
-      await db.campaign.update({ where: { id: campaignId }, data: { warRoom: JSON.stringify(wr) } })
+      await withCampaignLock(campaignId, async () => {
+        const current = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
+        const wr = JSON.parse(current.warRoom) as WarRoom
+        if (!wr.teamOutputs) wr.teamOutputs = {}
+        if (!wr.teamOutputs[challenged]) {
+          wr.teamOutputs[challenged] = { draft: '', challengeInput: '', challengeResponse: '' }
+        }
+        wr.teamOutputs[challenged]!.challengeInput = challengeInput
+        await db.campaign.update({ where: { id: campaignId }, data: { warRoom: JSON.stringify(wr) } })
+      })
 
       // Run challenge response agent
       await runAgent({

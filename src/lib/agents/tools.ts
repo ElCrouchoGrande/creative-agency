@@ -1,5 +1,6 @@
 import type { Tool } from '@anthropic-ai/sdk/resources'
 import { db } from '@/lib/db'
+import { withCampaignLock } from '@/lib/warRoomMutex'
 
 export const WEB_SEARCH_TOOL: Tool = {
   name: 'web_search',
@@ -123,12 +124,14 @@ export async function handleToolCall(
       return `Error: write path '${path}' is not permitted for this agent`
     }
 
-    const campaign = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
-    const warRoom = JSON.parse(campaign.warRoom) as Record<string, unknown>
-    setNestedValue(warRoom, path, content)
-    await db.campaign.update({
-      where: { id: campaignId },
-      data: { warRoom: JSON.stringify(warRoom) },
+    await withCampaignLock(campaignId, async () => {
+      const campaign = await db.campaign.findUniqueOrThrow({ where: { id: campaignId } })
+      const warRoom = JSON.parse(campaign.warRoom) as Record<string, unknown>
+      setNestedValue(warRoom, path, content)
+      await db.campaign.update({
+        where: { id: campaignId },
+        data: { warRoom: JSON.stringify(warRoom) },
+      })
     })
     return `Written to war room at path: ${path}`
   }
