@@ -45,12 +45,6 @@ export async function getCampaign(id: string): Promise<Campaign> {
   return res.json()
 }
 
-export async function listCampaigns(): Promise<Campaign[]> {
-  const res = await fetch('/api/campaigns', { cache: 'no-store' })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
 export async function approvePath(campaignId: string, pathId: 'A' | 'B' | 'C'): Promise<void> {
   const res = await fetch(`/api/campaigns/${campaignId}/approve-path`, {
     method: 'POST',
