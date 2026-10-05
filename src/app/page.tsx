@@ -8,6 +8,9 @@ export const dynamic = 'force-dynamic'
 // New submissions from visitors are kept private.
 const EXAMPLE_CUTOFF = new Date('2026-06-26T00:00:00.000Z')
 
+// Campaigns featured as examples regardless of when they were created.
+const FEATURED_CAMPAIGN_IDS = ['cmuvnhqsw00003qp1s8cnf2w3'] // Deepmind Institute
+
 interface CampaignSummary {
   id: string
   status: string
@@ -34,7 +37,7 @@ export default async function HomePage() {
       orderBy: { createdAt: 'desc' },
       select: { id: true, status: true, brief: true, createdAt: true },
       where: process.env.NODE_ENV !== 'development'
-        ? { createdAt: { lt: EXAMPLE_CUTOFF } }
+        ? { OR: [{ createdAt: { lt: EXAMPLE_CUTOFF } }, { id: { in: FEATURED_CAMPAIGN_IDS } }] }
         : undefined,
     })
     campaigns = rows.map((r) => ({ ...r, brief: JSON.parse(r.brief) as Brief }))
