@@ -121,7 +121,7 @@ export default async function HomePage() {
                     {STATUS_LABELS[campaign.status] ?? campaign.status.toUpperCase()}
                   </span>
                   <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--ink-dim)' }}>
-                    {new Date(campaign.createdAt).toLocaleDateString()}
+                    {new Date(campaign.createdAt).toLocaleDateString('en-GB')}
                   </span>
                 </div>
               </div>
