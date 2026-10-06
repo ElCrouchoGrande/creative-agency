@@ -4,7 +4,7 @@
 
 You write a short campaign brief. A team of AI agents researches the market, pitches three creative directions, and, once you choose one, nine specialist teams (earned media, social, content, paid media and more) argue over the plan, challenge each other, and hand back a finished campaign with measurement targets. You watch it all happen live.
 
-*Why "Brands by Bowser"?* In the game, the agency's own tagline says it best:
+*Why "Brands by Bowser"?* The agency's tagline says it best:
 
 > *The only integrated marketing agency run by 16-bit pixel sprites. Give us a brief and we'll create mushroom magic.*
 
