@@ -69,6 +69,15 @@ export default async function HomePage() {
         </Link>
       </div>
 
+      <p style={{
+        fontFamily: 'var(--font-body)', fontSize: 20, color: 'var(--ink-dim)',
+        textAlign: 'center', margin: '0 0 28px', lineHeight: 1.3,
+      }}>
+        The only integrated marketing agency run by 16-bit pixel sprites.
+        <br />
+        Give us a brief and we&apos;ll create mushroom magic.
+      </p>
+
       {campaigns.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
           <div style={{ fontFamily: 'var(--font-body)', fontSize: 22, color: 'var(--ink-dim)', marginBottom: 24 }}>
