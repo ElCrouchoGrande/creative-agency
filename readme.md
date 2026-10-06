@@ -10,13 +10,11 @@ You write a short campaign brief. A team of AI agents researches the market, pit
 
 The fictional agency is run by Bowser, the arch-villain of the Mario games, and the pixel-art look borrows from that world. It's a tongue-in-cheek homage, not an official or affiliated project.
 
-<!-- TODO: add a screenshot or short screen recording here, e.g. ![The agency at work](docs/images/agency.png) -->
-
 ## Why I built this
 
-I wanted to understand what AI can and can't do on a task that is genuinely hard: planning a PR and marketing campaign. That means research, creative judgement, specialist knowledge and people disagreeing with each other, not just one prompt and one answer.
+This was an early experiment in orchestrating AI agents around a single task. Different agents have different expertise, overseen by a coordinator/supervisor. The agents challenge each other across discipline to ultimately produce a single plan.
 
-Rather than ask one AI for "a campaign", I tried to mirror how a real agency works. Different roles, different expertise, a debate, a challenge from outside the team, and a human making the key decisions.
+Outputs aren't claimed to be human quality but improve as I layer in context to each agent.
 
 ## What it does
 
