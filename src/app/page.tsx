@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic'
 // New submissions from visitors are kept private.
 const EXAMPLE_CUTOFF = new Date('2026-06-26T00:00:00.000Z')
 
-// Campaigns featured as examples regardless of when they were created.
-const FEATURED_CAMPAIGN_IDS = ['cmuvnhqsw00003qp1s8cnf2w3'] // Deepmind Institute
+// Campaigns never shown on the public homepage (direct URLs still work).
+const HIDDEN_CAMPAIGN_IDS = ['cmuvnhqsw00003qp1s8cnf2w3'] // Deepmind Institute
 
 interface CampaignSummary {
   id: string
@@ -37,7 +37,7 @@ export default async function HomePage() {
       orderBy: { createdAt: 'desc' },
       select: { id: true, status: true, brief: true, createdAt: true },
       where: process.env.NODE_ENV !== 'development'
-        ? { OR: [{ createdAt: { lt: EXAMPLE_CUTOFF } }, { id: { in: FEATURED_CAMPAIGN_IDS } }] }
+        ? { createdAt: { lt: EXAMPLE_CUTOFF }, id: { notIn: HIDDEN_CAMPAIGN_IDS } }
         : undefined,
     })
     campaigns = rows.map((r) => ({ ...r, brief: JSON.parse(r.brief) as Brief }))
@@ -96,6 +96,15 @@ export default async function HomePage() {
           </Link>
         </div>
       ) : (
+        <>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--ink)', marginBottom: 6 }}>
+            EXAMPLE CAMPAIGNS
+          </div>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--ink-dim)', lineHeight: 1.3 }}>
+            Sample briefs showing what the agency produces. Start your own to see it work on yours.
+          </div>
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {campaigns.map((campaign) => (
             <Link
@@ -137,6 +146,20 @@ export default async function HomePage() {
             </Link>
           ))}
         </div>
+        <div style={{ textAlign: 'center', marginTop: 28 }}>
+          <Link
+            href="/campaigns/new"
+            style={{
+              fontFamily: 'var(--font-display)', fontSize: 10,
+              padding: '12px 20px', background: 'var(--accent)', color: '#241405',
+              border: '3px solid var(--ink)', textDecoration: 'none',
+              boxShadow: '4px 4px 0 rgba(0,0,0,.3)',
+            }}
+          >
+            ▶ START YOUR OWN CAMPAIGN
+          </Link>
+        </div>
+        </>
       )}
     </div>
   )
